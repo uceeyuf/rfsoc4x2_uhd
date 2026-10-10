@@ -41,7 +41,13 @@ proc read_lines {f} {
 # ---------------------------------------------------------------------------
 proc build_bd {bd_name tcl hdl} {
   global out
-  if {$hdl ne ""} { source $hdl }
+  if {$hdl ne ""} {
+    source $hdl
+    # the upstream lists read into library work; in a project the top level
+    # only resolves Verilog modules of the default library
+    set lib_work [get_files -quiet -of_objects [get_filesets sources_1] -filter {LIBRARY == work}]
+    if {[llength $lib_work]} { set_property library xil_defaultlib $lib_work }
+  }
   create_bd_design -dir $out/bd $bd_name
   # the BD scripts run in this scope; keep the design name out of their way
   set ::build_bd_name $bd_name
@@ -109,9 +115,7 @@ puts "BUILDER: defines: $defs"
 set_property top $top [current_fileset]
 set_property include_dirs $incdirs [current_fileset]
 set_property verilog_define $defs [current_fileset]
-# Read every source, as the upstream non-project flow does: automatic compile
-# order drops the BD module-reference sources (library work) from the top level.
-set_property source_mgmt_mode None [current_project]
+update_compile_order -fileset sources_1
 
 # ---------------------------------------------------------------------------
 # Synthesis

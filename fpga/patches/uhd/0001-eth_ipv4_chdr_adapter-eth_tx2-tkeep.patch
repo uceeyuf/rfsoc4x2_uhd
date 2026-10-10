@@ -1,0 +1,16 @@
+Vivado 2023.2 elaborates the axi4s_fifo parameter assertions: eth_tx2 (default
+TKEEP=1) feeds eth_tx, which has TKEEP=0 on the internal (DMA) Ethernet path.
+
+--- a/fpga/usrp3/lib/rfnoc/xport_sv/eth_ipv4_chdr_adapter.sv	2026-10-10 19:17:47.930164133 +0100
++++ b/fpga/usrp3/lib/rfnoc/xport_sv/eth_ipv4_chdr_adapter.sv	2026-10-10 19:17:47.931485823 +0100
+@@ -497,7 +497,9 @@
+   //   tUser = {1'b0,trailing bytes}
+   AxiStreamIf #(.DATA_WIDTH(ENET_W),.USER_WIDTH(ENET_USER_W),.TKEEP(0)) eth_tx1 (eth_rx.clk,eth_rx.rst);
+   //   tUser = {1'b0,trailing bytes}
+-  AxiStreamIf #(.DATA_WIDTH(ENET_W),.USER_WIDTH(ENET_USER_W)) eth_tx2 (eth_rx.clk,eth_rx.rst);
++  //   TKEEP as eth_tx: the output FIFO checks that both sides match (tkeep is
++  //   always driven; without TKEEP the trailing bytes travel in tuser)
++  AxiStreamIf #(.DATA_WIDTH(ENET_W),.USER_WIDTH(ENET_USER_W),.TKEEP(eth_tx.TKEEP)) eth_tx2 (eth_rx.clk,eth_rx.rst);
+ 
+ 
+   logic c2e3_tready;

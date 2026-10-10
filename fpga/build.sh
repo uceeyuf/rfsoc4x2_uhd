@@ -17,6 +17,18 @@ YAML=${YAML:-$HERE/rfsoc4x2_CG_400_rfnoc_image_core.yml}
 X400=$ROOT/uhd/fpga/usrp3/top/x400
 
 mkdir -p "$ROOT/build"
+
+# UHD stays unmodified: fpga/patches/uhd/*.patch are applied to copies of the
+# touched files in build/uhd_patched/, which build.tcl uses instead
+rm -rf "$ROOT/build/uhd_patched"
+for p in "$HERE"/patches/uhd/*.patch; do
+  [ -e "$p" ] || continue
+  for f in $(sed -n 's|^+++ b/\([^[:space:]]*\).*|\1|p' "$p"); do
+    mkdir -p "$ROOT/build/uhd_patched/$(dirname "$f")"
+    [ -e "$ROOT/build/uhd_patched/$f" ] || cp "$ROOT/uhd/$f" "$ROOT/build/uhd_patched/$f"
+  done
+  patch -s -p1 -d "$ROOT/build/uhd_patched" < "$p"
+done
 "$HERE/tools/rfnoc_image_builder.py" -y "$YAML" -F "$ROOT/uhd/fpga" -B "$ROOT/build/image_core" -G
 source "$VIVADO_SETTINGS"
 make -s -f "$HERE/tools/design_srcs.mk" -C "$X400" BUILD_DIR="$ROOT/build/image_core" list \

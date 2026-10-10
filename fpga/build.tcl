@@ -83,8 +83,18 @@ build_bd rfsoc4x2_ps_rfdc_bd $root/fpga/ip/rfsoc4x2_ps_rfdc_bd/rfsoc4x2_ps_rfdc_
 set srcs [read_lines $root/build/design_srcs.txt]
 lappend srcs $root/fpga/rfsoc4x2.sv
 set incdirs [list $x400 $ic]
+set patched $root/build/uhd_patched
 foreach f $srcs {
   if {[string match */x400/x4xx.sv $f]} continue
+  # patched copy (fpga/patches/uhd) instead of the submodule file
+  if {[string first $root/uhd/ $f] == 0} {
+    set p $patched/[string range $f [string length $root/uhd/] end]
+    if {[file exists $p]} {
+      lappend incdirs [file dirname $f]
+      puts "BUILDER: using patched $p"
+      set f $p
+    }
+  }
   set e [file extension $f]
   if {[lsearch {.xci .bd .xdc .sdc} $e] >= 0} continue
   # outputs of the upstream IP build (10 GbE PCS/PMA wrappers): not built here

@@ -39,10 +39,30 @@ proc read_lines {f} {
 # ---------------------------------------------------------------------------
 # Block designs: upstream X4xx Tcl, retargeted to this Vivado and part
 # ---------------------------------------------------------------------------
+# Replace project sources that have a patched copy (fpga/patches/uhd, see
+# build.sh) by that copy, keeping file type and library
+proc use_patched_sources {} {
+  global root
+  foreach f [get_files -quiet -of_objects [get_filesets sources_1]] {
+    set nf [file normalize $f]
+    if {[string first $root/uhd/ $nf] != 0} continue
+    set p $root/build/uhd_patched/[string range $nf [string length $root/uhd/] end]
+    if {![file exists $p] || [get_files -quiet $p] ne ""} continue
+    set type [get_property FILE_TYPE [get_files $f]]
+    set lib [get_property LIBRARY [get_files $f]]
+    remove_files $f
+    add_files -norecurse $p
+    set_property FILE_TYPE $type [get_files $p]
+    set_property LIBRARY $lib [get_files $p]
+    puts "BUILDER: using patched $p"
+  }
+}
+
 proc build_bd {bd_name tcl hdl} {
   global out
   if {$hdl ne ""} {
     source $hdl
+    use_patched_sources
     # the upstream lists read into library work; in a project the top level
     # only resolves Verilog modules of the default library
     set lib_work [get_files -quiet -of_objects [get_filesets sources_1] -filter {LIBRARY == work}]

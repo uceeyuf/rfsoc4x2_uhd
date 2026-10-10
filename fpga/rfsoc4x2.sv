@@ -15,7 +15,8 @@
 //     ip/rfsoc4x2_ps_rfdc_bd. DB0 = radio0 = ADC 224/225, DAC 228/229;
 //     DB1 = radio1 = ADC 226/227, DAC 230/231. Bonded on the board: DB0_RX[1:0]
 //     (ADC_D/ADC_C), DB1_RX[1:0] (ADC_B/ADC_A), DB0_TX[0] (DAC_B), DB1_TX[0]
-//     (DAC_A).
+//     (DAC_A). The RFDC channel mapping is the identity, so these are radio
+//     ports 0/1 (RX) and 0 (TX).
 //   - PLL_REFCLK_FPGA = LMK04828 OUT8 (FPGA_REFCLK_IN, 125 MHz), SYSREF_FABRIC
 //     = LMK04828 OUT9. pll_ref_clk (data clock MMCM output) is 125 MHz too; the
 //     base reference clock (PPS generation) is pll_ref_clk / 5 = 25 MHz.
@@ -1987,7 +1988,13 @@ module rfsoc4x2 (
   wire mfg_test_en_gty_rcv_clk;
 
   // Map RFDC ports to x4xx_core ports
-    `include "regmap/x440/rfdc_mapping_regmap_utils.vh"
+    // RFSoC 4x2: identity mapping (X440: regmap/x440/rfdc_mapping_regmap_utils.vh).
+    // ADC: 0/1 = tile 224 ch0/ch1, 2/3 = 225, 4/5 = 226, 6/7 = 227.
+    // DAC: 0/1 = tile 228 block 0/2, 2/3 = 229, 4/5 = 230, 6/7 = 231.
+    localparam CH0_RX_MAPPING = 0, CH1_RX_MAPPING = 1, CH2_RX_MAPPING = 2, CH3_RX_MAPPING = 3;
+    localparam CH4_RX_MAPPING = 4, CH5_RX_MAPPING = 5, CH6_RX_MAPPING = 6, CH7_RX_MAPPING = 7;
+    localparam CH0_TX_MAPPING = 0, CH1_TX_MAPPING = 1, CH2_TX_MAPPING = 2, CH3_TX_MAPPING = 3;
+    localparam CH4_TX_MAPPING = 4, CH5_TX_MAPPING = 5, CH6_TX_MAPPING = 6, CH7_TX_MAPPING = 7;
 
     assign rx_data_qi = { adc_data_out_tdata [CH7_RX_MAPPING], adc_data_out_tdata [CH6_RX_MAPPING],
                           adc_data_out_tdata [CH5_RX_MAPPING], adc_data_out_tdata [CH4_RX_MAPPING],

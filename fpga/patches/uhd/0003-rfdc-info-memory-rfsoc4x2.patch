@@ -1,0 +1,56 @@
+RFDC info memory (converter table read by MPM) for the RFSoC 4x2: xczu48dr dual
+DAC tiles (blocks 0/2), four DAC tiles, identity channel mapping (rfsoc4x2.sv).
+
+--- a/fpga/usrp3/top/x400/rf/x440/x440_rfdc_memory_content_pkg.sv	2026-10-10 22:27:34.374321184 +0100
++++ b/fpga/usrp3/top/x400/rf/x440/x440_rfdc_memory_content_pkg.sv	2026-10-10 22:27:34.388509009 +0100
+@@ -20,31 +20,29 @@
+   );
+     localparam USED_ENTRIES = 16;
+     rfdc_memory_entry_t entries [USED_ENTRIES] = '{
+-      // See corresponding code in x4xx.sv where ADC data (adc_data_out_tdata) is
+-      // assigned to rx_data_qi.
+-      // DB 0 uses tiles 224 and 225
+-      '{is_adc:1, db:0, channel:0, subchannel:0, tile:1, block:1, block_mode:REAL_MODE},
++      // RFSoC 4x2 (xczu48dr): identity channel mapping (see rfsoc4x2.sv).
++      // ADC tiles are dual (blocks 0/1), DAC tiles are dual (blocks 0/2).
++      // Bonded: DB 0 ch 0/1 = ADC_D/ADC_C, DAC_B; DB 1 ch 0/1 = ADC_B/ADC_A, DAC_A.
++      // DB 0 uses ADC tiles 224 and 225
++      '{is_adc:1, db:0, channel:0, subchannel:0, tile:0, block:0, block_mode:REAL_MODE},
+       '{is_adc:1, db:0, channel:1, subchannel:0, tile:0, block:1, block_mode:REAL_MODE},
+-      '{is_adc:1, db:0, channel:2, subchannel:0, tile:0, block:0, block_mode:REAL_MODE},
+-      '{is_adc:1, db:0, channel:3, subchannel:0, tile:1, block:0, block_mode:REAL_MODE},
+-      // DB 1 uses tiles 226 and 227
+-      '{is_adc:1, db:1, channel:0, subchannel:0, tile:3, block:1, block_mode:REAL_MODE},
++      '{is_adc:1, db:0, channel:2, subchannel:0, tile:1, block:0, block_mode:REAL_MODE},
++      '{is_adc:1, db:0, channel:3, subchannel:0, tile:1, block:1, block_mode:REAL_MODE},
++      // DB 1 uses ADC tiles 226 and 227
++      '{is_adc:1, db:1, channel:0, subchannel:0, tile:2, block:0, block_mode:REAL_MODE},
+       '{is_adc:1, db:1, channel:1, subchannel:0, tile:2, block:1, block_mode:REAL_MODE},
+-      '{is_adc:1, db:1, channel:2, subchannel:0, tile:2, block:0, block_mode:REAL_MODE},
+-      '{is_adc:1, db:1, channel:3, subchannel:0, tile:3, block:0, block_mode:REAL_MODE},
+-
+-      // See corresponding code in x4xx.sv where DAC data (dac_data_in_tdata) is
+-      // assigned from tx_data_qi.
+-      // DB 0 uses tile 228
++      '{is_adc:1, db:1, channel:2, subchannel:0, tile:3, block:0, block_mode:REAL_MODE},
++      '{is_adc:1, db:1, channel:3, subchannel:0, tile:3, block:1, block_mode:REAL_MODE},
++      // DB 0 uses DAC tiles 228 and 229
+       '{is_adc:0, db:0, channel:0, subchannel:0, tile:0, block:0, block_mode:REAL_MODE},
+       '{is_adc:0, db:0, channel:1, subchannel:0, tile:0, block:2, block_mode:REAL_MODE},
+-      '{is_adc:0, db:0, channel:2, subchannel:0, tile:0, block:3, block_mode:REAL_MODE},
+-      '{is_adc:0, db:0, channel:3, subchannel:0, tile:0, block:1, block_mode:REAL_MODE},
+-      // DB 1 uses tile 229
+-      '{is_adc:0, db:1, channel:0, subchannel:0, tile:1, block:0, block_mode:REAL_MODE},
+-      '{is_adc:0, db:1, channel:1, subchannel:0, tile:1, block:2, block_mode:REAL_MODE},
+-      '{is_adc:0, db:1, channel:2, subchannel:0, tile:1, block:3, block_mode:REAL_MODE},
+-      '{is_adc:0, db:1, channel:3, subchannel:0, tile:1, block:1, block_mode:REAL_MODE}
++      '{is_adc:0, db:0, channel:2, subchannel:0, tile:1, block:0, block_mode:REAL_MODE},
++      '{is_adc:0, db:0, channel:3, subchannel:0, tile:1, block:2, block_mode:REAL_MODE},
++      // DB 1 uses DAC tiles 230 and 231
++      '{is_adc:0, db:1, channel:0, subchannel:0, tile:2, block:0, block_mode:REAL_MODE},
++      '{is_adc:0, db:1, channel:1, subchannel:0, tile:2, block:2, block_mode:REAL_MODE},
++      '{is_adc:0, db:1, channel:2, subchannel:0, tile:3, block:0, block_mode:REAL_MODE},
++      '{is_adc:0, db:1, channel:3, subchannel:0, tile:3, block:2, block_mode:REAL_MODE}
+     };
+ 
+     if (i < USED_ENTRIES) begin

@@ -1,0 +1,111 @@
+/include/ "system-conf.dtsi"
+#include <dt-bindings/phy/phy.h>
+
+/*
+ * RFSoC 4x2 board device tree for the UHD (MPM) image. Board facts from the
+ * RFSoC 4x2 reference manual and RealDigital's RFSoC4x2-BSP: GEM1 with a TI
+ * DP83867 PHY at address 15, SD0 without 1.8 V signalling, PS-GTR reference
+ * clocks, LMK04828 / LMX2594 on PS SPI0 (SS0 / SS1 / SS2).
+ * The PL nodes are not in the base tree: MPM applies the FPGA image and its
+ * overlay (fpga/dts) at runtime.
+ */
+
+/ {
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+
+	dp_clk: psgtr_dp_clock {
+		compatible = "fixed-clock";
+		#clock-cells = <0x00>;
+		clock-frequency = <27000000>;
+	};
+
+	usb_clk: psgtr_usb_clock {
+		compatible = "fixed-clock";
+		#clock-cells = <0x00>;
+		clock-frequency = <26000000>;
+	};
+};
+
+&gem1 {
+	status = "okay";
+	phy-handle = <&phy0>;
+	phy-mode = "rgmii-id";
+	phy0: phy@f {
+		reg = <0xf>;
+		ti,rx-internal-delay = <0x8>;
+		ti,tx-internal-delay = <0xa>;
+		ti,fifo-depth = <0x1>;
+		ti,dp83867-rxctrl-strap-quirk;
+	};
+};
+
+&sdhci0 {
+	no-1-8-v;
+};
+
+&psgtr {
+	/* dp 0-1, usb0, usb1 */
+	clocks = <&usb_clk>, <&dp_clk>;
+	clock-names = "ref0", "ref1";
+};
+
+&zynqmp_dpsub {
+	phys = <&psgtr 1 PHY_TYPE_DP 0 1>, <&psgtr 0 PHY_TYPE_DP 1 1>;
+};
+
+&usb0 {
+	status = "okay";
+	phys = <&psgtr 2 PHY_TYPE_USB3 0 1>;
+};
+
+&dwc3_0 {
+	status = "okay";
+	dr_mode = "peripheral";
+	snps,usb3_lpm_capable;
+	phy-names = "usb3-phy";
+	maximum-speed = "super-speed";
+};
+
+&usb1 {
+	status = "okay";
+	phys = <&psgtr 3 PHY_TYPE_USB3 1 1>;
+};
+
+&dwc3_1 {
+	status = "okay";
+	dr_mode = "host";
+	snps,usb3_lpm_capable;
+	phy-names = "usb3-phy";
+	maximum-speed = "super-speed";
+};
+
+/* Clock chips: spidev nodes with labels for MPM */
+&spi0 {
+	status = "okay";
+	lmk04828: spidev@0 {
+		compatible = "rohm,dh2228fv";
+		reg = <0>;
+		spi-max-frequency = <1000000>;
+	};
+	lmx2594_adc: spidev@1 {
+		compatible = "rohm,dh2228fv";
+		reg = <1>;
+		spi-max-frequency = <1000000>;
+	};
+	lmx2594_dac: spidev@2 {
+		compatible = "rohm,dh2228fv";
+		reg = <2>;
+		spi-max-frequency = <1000000>;
+	};
+};
+
+/* LMK04828 control on PS MIO (names used by MPM) */
+&gpio {
+	gpio-line-names = "", "", "", "", "", "", "",
+			  "LMK_RST",            /* MIO7 */
+			  "LMK_CLK_IN_SEL0",    /* MIO8 */
+			  "", "", "",
+			  "LMK_CLK_IN_SEL1";    /* MIO12 */
+};

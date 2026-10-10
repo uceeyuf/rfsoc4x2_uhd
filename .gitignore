@@ -3,3 +3,6 @@ build/
 *.jou
 *.log
 __pycache__/
+linux/plnx_build.log
+linux/plnx_build.done
+linux/petalinux/project-spec/hw-description/

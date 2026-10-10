@@ -1,5 +1,6 @@
 #
-# RFSoC 4x2 UHD FPGA build (Vivado 2023.2, non-project mode).
+# RFSoC 4x2 UHD FPGA build (Vivado 2023.2, project mode: the block designs'
+# IP, including SmartConnect's nested IP, are synthesized out of context).
 #
 #   vivado -mode batch -source fpga/build.tcl -tclargs <step> [jobs]
 #     step: rtl   (RTL elaboration only, quick check)
@@ -26,8 +27,9 @@ file mkdir $out
 cd $out
 set_param general.maxThreads $jobs
 set_param messaging.defaultLimit 10000
-create_project -in_memory -part $part
+create_project -force rfsoc4x2 $out/proj -part $part
 set_property source_mgmt_mode All [current_project]
+set_property target_language Verilog [current_project]
 
 proc read_lines {f} {
   set fh [open $f r]; set l [split [string trim [read $fh]] "\n"]; close $fh
@@ -48,8 +50,8 @@ proc build_bd {bd_name tcl hdl} {
   validate_bd_design
   save_bd_design
   set f [get_files $bd_name.bd]
-  set_property synth_checkpoint_mode None $f
   generate_target all $f
+  create_ip_run $f
   close_bd_design [get_bd_designs $bd_name]
 }
 
@@ -83,16 +85,16 @@ foreach f $srcs {
   if {![file exists $f]} { puts "BUILDER: skipping missing $f"; continue }
   lappend incdirs [file dirname $f]
   switch -- $e {
-    .vhd     { read_vhdl -vhdl2008 -library work $f }
-    .v - .vh { read_verilog $f }
-    .sv - .svh { read_verilog -sv $f }
-    .edif    { read_edif $f }
+    .vhd     { add_files -norecurse $f; set_property file_type {VHDL 2008} [get_files $f] }
+    .v - .vh { add_files -norecurse $f }
+    .sv - .svh { add_files -norecurse $f; set_property file_type SystemVerilog [get_files $f] }
+    .edif    { add_files -norecurse $f }
   }
 }
 set incdirs [lsort -unique $incdirs]
 
-read_xdc $root/fpga/constraints/pins/rfsoc4x2.xdc
-read_xdc $root/fpga/constraints/timing/rfsoc4x2.xdc
+add_files -fileset constrs_1 -norecurse [list $root/fpga/constraints/pins/rfsoc4x2.xdc \
+  $root/fpga/constraints/timing/rfsoc4x2.xdc]
 
 set git_hash [string range [exec git -C $root rev-parse HEAD] 0 7]
 set defs [list X440=1 RFNOC_IMAGE_CORE_HDR=$ic/rfnoc_image_core.vh \
@@ -102,6 +104,11 @@ foreach d [split [string trim [read [open $root/build/image_defs.txt]]] " "] {
 }
 puts "BUILDER: defines: $defs"
 
+set_property top $top [current_fileset]
+set_property include_dirs $incdirs [current_fileset]
+set_property verilog_define $defs [current_fileset]
+update_compile_order -fileset sources_1
+
 # ---------------------------------------------------------------------------
 # Synthesis
 # ---------------------------------------------------------------------------
@@ -110,8 +117,13 @@ if {$step eq "rtl"} {
   puts "BUILDER: RTL elaboration done"
   exit
 }
-synth_design -top $top -part $part -include_dirs $incdirs -verilog_define $defs
-write_checkpoint -force $out/post_synth.dcp
+launch_runs synth_1 -jobs $jobs
+wait_on_run synth_1
+if {[get_property PROGRESS [get_runs synth_1]] ne "100%"} {
+  puts "BUILDER: synthesis FAILED"
+  exit 1
+}
+open_run synth_1
 report_utilization -file $out/post_synth_util.rpt
 report_timing_summary -file $out/post_synth_timing.rpt
 puts "BUILDER: synthesis done"
@@ -120,17 +132,19 @@ if {$step eq "synth"} { exit }
 # ---------------------------------------------------------------------------
 # Implementation, bitstream, XSA
 # ---------------------------------------------------------------------------
-opt_design
-place_design -directive ExtraNetDelay_high
-phys_opt_design
-route_design
-phys_opt_design
-write_checkpoint -force $out/post_route.dcp
+set_property strategy Performance_ExplorePostRoutePhysOpt [get_runs impl_1]
+set_property STEPS.PLACE_DESIGN.ARGS.DIRECTIVE ExtraNetDelay_high [get_runs impl_1]
+launch_runs impl_1 -to_step write_bitstream -jobs $jobs
+wait_on_run impl_1
+if {[get_property PROGRESS [get_runs impl_1]] ne "100%"} {
+  puts "BUILDER: implementation FAILED"
+  exit 1
+}
+open_run impl_1
 report_utilization -file $out/post_route_util.rpt
 report_timing_summary -file $out/post_route_timing.rpt
 set wns [get_property SLACK [get_timing_paths -max_paths 1 -nworst 1 -setup]]
 puts "BUILDER: post-route WNS $wns"
-set_property BITSTREAM.CONFIG.USR_ACCESS TIMESTAMP [current_design]
-write_bitstream -force -bin_file $out/$top.bit
+file copy -force [get_property DIRECTORY [get_runs impl_1]]/$top.bit $out/$top.bit
 write_hw_platform -fixed -include_bit -force $out/$top.xsa
 puts "BUILDER: implementation done"

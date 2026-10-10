@@ -8,6 +8,7 @@
 set_property CFGBVS GND [current_design]
 set_property CONFIG_VOLTAGE 1.8 [current_design]
 set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
+set_property BITSTREAM.CONFIG.USR_ACCESS TIMESTAMP [current_design]
 
 # LMK04828 -> PL: FPGA_REFCLK_IN (PLL_REFCLK_FPGA) and SYS_REF_FPGA (SYSREF_FABRIC),
 # LVDS in HP banks 65/66, terminated on die

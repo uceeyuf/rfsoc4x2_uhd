@@ -98,7 +98,6 @@ connect_bd_net -net $r1_net [get_bd_pins rf_data_converter/s2_axis_aclk] \
 
 # DAC outputs: hierarchy pins and top-level ports named by tile / channel
 foreach pin [get_bd_intf_pins -quiet dac_tile22*_vout] { delete_bd_objs $pin }
-foreach port [get_bd_intf_ports -quiet dac_tile22*_vout] { delete_bd_objs $port }
 foreach {t c vpin} {
   228 0 vout00  228 1 vout02  229 0 vout10  229 1 vout12
   230 0 vout20  230 1 vout22  231 0 vout30  231 1 vout32
@@ -132,12 +131,18 @@ current_bd_instance /
 foreach pin_name {adc0_clk adc1_clk adc3_clk dac0_clk dac1_clk} {
   delete_bd_objs [get_bd_intf_ports -quiet $pin_name]
 }
-make_bd_intf_pins_external [get_bd_intf_pins rfdc/dac2_clk]
-set_property name dac2_clk [get_bd_intf_ports dac2_clk_0]
+# X440 DAC output ports (their hierarchy pins are gone)
+foreach port [get_bd_intf_ports -quiet dac_tile22*_vout] { delete_bd_objs $port }
+
+# Make a hierarchy pin external under the given top-level port name
+proc rfsoc4x2_external {pin port_name} {
+  make_bd_intf_pins_external [get_bd_intf_pins $pin]
+  set port [get_bd_intf_ports -of_objects [get_bd_intf_nets -of_objects [get_bd_intf_pins $pin]]]
+  set_property name $port_name $port
+}
+rfsoc4x2_external rfdc/dac2_clk dac2_clk
 foreach {t c} {228 0 228 1 229 0 229 1 230 0 230 1 231 0 231 1} {
-  set pin_name dac_tile${t}_ch${c}_vout
-  make_bd_intf_pins_external [get_bd_intf_pins rfdc/$pin_name]
-  set_property name $pin_name [get_bd_intf_ports ${pin_name}_0]
+  rfsoc4x2_external rfdc/dac_tile${t}_ch${c}_vout dac_tile${t}_ch${c}_vout
 }
 set_property CONFIG.FREQ_HZ 500000000 [get_bd_intf_ports adc2_clk]
 set_property CONFIG.FREQ_HZ 500000000 [get_bd_intf_ports dac2_clk]

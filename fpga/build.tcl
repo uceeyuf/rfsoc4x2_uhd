@@ -141,11 +141,15 @@ if {[get_property PROGRESS [get_runs synth_1]] ne "100%"} {
   puts "BUILDER: synthesis FAILED"
   exit 1
 }
-open_run synth_1
-report_utilization -file $out/post_synth_util.rpt
-report_timing_summary -file $out/post_synth_timing.rpt
 puts "BUILDER: synthesis done"
-if {$step eq "synth"} { exit }
+if {$step eq "synth"} {
+  open_run synth_1
+  report_utilization -file $out/post_synth_util.rpt
+  report_timing_summary -file $out/post_synth_timing.rpt
+  exit
+}
+# (the synthesized design is not opened here: the implementation run is a
+# separate Vivado process, and both together would double the memory)
 
 # ---------------------------------------------------------------------------
 # Implementation, bitstream, XSA

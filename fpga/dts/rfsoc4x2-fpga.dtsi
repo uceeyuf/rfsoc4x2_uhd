@@ -1,0 +1,10 @@
+/*
+ * RFSoC 4x2: FPGA image name for the fpga_full overlay (as x440-fpga.dtsi,
+ * Copyright 2022 Ettus Research, LGPL-3.0-or-later).
+ *
+ * SPDX-License-Identifier: LGPL-3.0-or-later
+ */
+
+&fpga_full {
+	firmware-name = "rfsoc4x2.bin";
+};

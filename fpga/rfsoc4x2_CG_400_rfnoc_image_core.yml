@@ -1,0 +1,120 @@
+# RFSoC 4x2 RFNoC image: one 100 GbE port (QSFP28), DMA to the PS, two radios
+# with four ports each at 400 MHz bandwidth (MCR 500 MS/s), no DDC/DUC blocks.
+# Based on x440_CG_400_rfnoc_image_core.yml (UHD v4.11.0.0, Ettus Research,
+# LGPL-3.0-or-later).
+# Bonded RFSoC 4x2 converters: radio0 RX 0/1 = ADC_C/ADC_D, TX 0 = DAC_A;
+# radio1 RX 0/1 = ADC_A/ADC_B, TX 0 = DAC_B. The other ports are kept so the
+# channel numbering matches the X440; their endpoints get small buffers.
+schema: rfnoc_imagebuilder_args
+copyright: >-
+  Copyright 2026 Yijie Yu; based on Ettus Research X440 image definitions
+license: >-
+  SPDX-License-Identifier: LGPL-3.0-or-later
+version: '1.0'
+chdr_width: 512
+device: 'rfsoc4x2'
+image_core_name: 'usrp_rfsoc4x2_fpga_CG_400'
+default_target: 'RFSOC4X2'
+
+parameters:
+  RF_BW: 400
+  ENABLE_DRAM: False
+  NUM_DRAM_BANKS: 0
+  NUM_DRAM_CHANS: 0
+  DRAM_WIDTH: 128
+
+stream_endpoints:
+  ep0:
+    ctrl: True
+    data: True
+    buff_size_bytes: 524288
+  ep1:
+    ctrl: False
+    data: True
+    buff_size_bytes: 65536
+  ep2:
+    ctrl: False
+    data: True
+    buff_size_bytes: 32768
+  ep3:
+    ctrl: False
+    data: True
+    buff_size_bytes: 32768
+  ep4:
+    ctrl: False
+    data: True
+    buff_size_bytes: 524288
+  ep5:
+    ctrl: False
+    data: True
+    buff_size_bytes: 65536
+  ep6:
+    ctrl: False
+    data: True
+    buff_size_bytes: 32768
+  ep7:
+    ctrl: False
+    data: True
+    buff_size_bytes: 32768
+
+transport_adapters:
+  eth_qsfp0:
+    block_desc: 'x4xx_eth.yml'
+    parameters:
+      port_type0: 5          # 100 GbE
+      port_type1: 0
+      port_type2: 0
+      port_type3: 0
+      qsfp_num: 0
+  dma:
+    block_desc: 'chdr_dma.yml'
+
+noc_blocks:
+  radio0:
+    block_desc: 'radio.yml'
+    parameters:
+      NUM_PORTS: 4
+      EN_COMP_GAIN_TX: 1
+      EN_COMP_GAIN_RX: 1
+    ctrl_clock: _device_.rfnoc_ctrl
+    timebase_clock: _device_.radio0
+  radio1:
+    block_desc: 'radio.yml'
+    parameters:
+      NUM_PORTS: 4
+      EN_COMP_GAIN_TX: 1
+      EN_COMP_GAIN_RX: 1
+    ctrl_clock: _device_.rfnoc_ctrl
+    timebase_clock: _device_.radio1
+
+connections:
+  - { srcblk: ep0, srcport: out0, dstblk: radio0, dstport: in_0 }
+  - { srcblk: radio0, srcport: out_0, dstblk: ep0, dstport: in0 }
+  - { srcblk: ep1, srcport: out0, dstblk: radio0, dstport: in_1 }
+  - { srcblk: radio0, srcport: out_1, dstblk: ep1, dstport: in0 }
+  - { srcblk: ep2, srcport: out0, dstblk: radio0, dstport: in_2 }
+  - { srcblk: radio0, srcport: out_2, dstblk: ep2, dstport: in0 }
+  - { srcblk: ep3, srcport: out0, dstblk: radio0, dstport: in_3 }
+  - { srcblk: radio0, srcport: out_3, dstblk: ep3, dstport: in0 }
+  - { srcblk: ep4, srcport: out0, dstblk: radio1, dstport: in_0 }
+  - { srcblk: radio1, srcport: out_0, dstblk: ep4, dstport: in0 }
+  - { srcblk: ep5, srcport: out0, dstblk: radio1, dstport: in_1 }
+  - { srcblk: radio1, srcport: out_1, dstblk: ep5, dstport: in0 }
+  - { srcblk: ep6, srcport: out0, dstblk: radio1, dstport: in_2 }
+  - { srcblk: radio1, srcport: out_2, dstblk: ep6, dstport: in0 }
+  - { srcblk: ep7, srcport: out0, dstblk: radio1, dstport: in_3 }
+  - { srcblk: radio1, srcport: out_3, dstblk: ep7, dstport: in0 }
+  # BSP connections
+  - { srcblk: radio0,    srcport: ctrlport,   dstblk: _device_, dstport: ctrlport_radio0 }
+  - { srcblk: radio1,    srcport: ctrlport,   dstblk: _device_, dstport: ctrlport_radio1 }
+  - { srcblk: _device_,  srcport: radio0,     dstblk: radio0,   dstport: radio }
+  - { srcblk: _device_,  srcport: radio1,     dstblk: radio1,   dstport: radio }
+  - { srcblk: _device_,  srcport: time0,      dstblk: radio0,   dstport: time }
+  - { srcblk: _device_,  srcport: time1,      dstblk: radio1,   dstport: time }
+  - { srcblk: eth_qsfp0, srcport: qsfp,       dstblk: _device_, dstport: qsfp0 }
+  - { srcblk: dma,       srcport: chdr_dma_s, dstblk: _device_, dstport: chdr_dma_s }
+  - { srcblk: _device_,  srcport: chdr_dma_m, dstblk: dma,      dstport: chdr_dma_m }
+
+clk_domains:
+  - { srcblk: _device_, srcport: radio0, dstblk: radio0, dstport: radio }
+  - { srcblk: _device_, srcport: radio1, dstblk: radio1, dstport: radio }

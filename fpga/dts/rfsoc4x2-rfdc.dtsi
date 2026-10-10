@@ -1,0 +1,45 @@
+/*
+ * RFSoC 4x2: RF data converter and RFDC register block (structure as
+ * x440-rfdc.dtsi, Copyright 2021 Ettus Research, LGPL-3.0-or-later).
+ *
+ * The RFDC driver configuration (param-list) depends on the RFDC IP settings;
+ * it is generated from the XSA of this design into rfsoc4x2-rfdc-params.dtsi.
+ *
+ * SPDX-License-Identifier: LGPL-3.0-or-later
+ */
+
+&fpga_full {
+	#address-cells = <2>;
+	#size-cells = <2>;
+
+	misc_clk_1: misc_clk_1 {
+		#clock-cells = <0>;
+		clock-frequency = <40000000>;
+		compatible = "fixed-clock";
+	};
+
+	/* RFDC AXI-Stream clocks: MCR 500 MS/s, 8 samples per cycle */
+	misc_clk_2: misc_clk_2 {
+		#clock-cells = <0>;
+		clock-frequency = <62500000>;
+		compatible = "fixed-clock";
+	};
+
+	rf_data_converter: usp_rf_data_converter@1000100000 {
+		clock-names = "s_axi_aclk", "m0_axis_aclk", "m1_axis_aclk", "m2_axis_aclk", "m3_axis_aclk",
+		              "s0_axis_aclk", "s1_axis_aclk", "s2_axis_aclk", "s3_axis_aclk";
+		clocks = <&misc_clk_1>, <&misc_clk_2>, <&misc_clk_2>, <&misc_clk_2>, <&misc_clk_2>,
+		         <&misc_clk_2>, <&misc_clk_2>, <&misc_clk_2>, <&misc_clk_2>;
+		compatible = "xlnx,usp-rf-data-converter-2.1";
+		num-insts = <0x1>;
+#include "rfsoc4x2-rfdc-params.dtsi"
+		reg = <0x00000010 0x00100000 0x0 0x40000>;
+	};
+
+	rfdc_regs: uio@1000140000 {
+		status = "okay";
+		compatible = "usrp-uio";
+		reg = <0x10 0x00140000 0x0 0x20000>;
+		reg-names = "rfdc-regs";
+	};
+};

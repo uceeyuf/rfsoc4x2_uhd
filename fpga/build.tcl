@@ -37,17 +37,20 @@ proc read_lines {f} {
 # ---------------------------------------------------------------------------
 # Block designs: upstream X4xx Tcl, retargeted to this Vivado and part
 # ---------------------------------------------------------------------------
-proc build_bd {name tcl hdl} {
+proc build_bd {bd_name tcl hdl} {
   global out
   if {$hdl ne ""} { source $hdl }
-  create_bd_design -dir $out/bd $name
+  create_bd_design -dir $out/bd $bd_name
+  # the BD scripts run in this scope; keep the design name out of their way
+  set ::build_bd_name $bd_name
   source $tcl
+  set bd_name $::build_bd_name
   validate_bd_design
   save_bd_design
-  set f [get_files $name.bd]
+  set f [get_files $bd_name.bd]
   set_property synth_checkpoint_mode None $f
   generate_target all $f
-  close_bd_design [get_bd_designs $name]
+  close_bd_design [get_bd_designs $bd_name]
 }
 
 file mkdir $out/bd_tcl
@@ -76,6 +79,8 @@ foreach f $srcs {
   if {[string match */x400/x4xx.sv $f]} continue
   set e [file extension $f]
   if {[lsearch {.xci .bd .xdc .sdc} $e] >= 0} continue
+  # outputs of the upstream IP build (10 GbE PCS/PMA wrappers): not built here
+  if {![file exists $f]} { puts "BUILDER: skipping missing $f"; continue }
   lappend incdirs [file dirname $f]
   switch -- $e {
     .vhd     { read_vhdl -vhdl2008 -library work $f }

@@ -16,9 +16,9 @@
 //     DB1 = radio1 = ADC 226/227, DAC 230/231. Bonded on the board: DB0_RX[1:0]
 //     (ADC_C/ADC_D), DB1_RX[1:0] (ADC_A/ADC_B), DB0_TX[0] (DAC_A), DB1_TX[0]
 //     (DAC_B).
-//   - PLL_REFCLK_FPGA = LMK04828 FPGA_REFCLK_IN (125 MHz), SYSREF_FABRIC =
-//     LMK04828 SYS_REF_FPGA. The base reference clock (PPS generation) is
-//     PLL_REFCLK_FPGA / 5 = 25 MHz.
+//   - PLL_REFCLK_FPGA = LMK04828 FPGA_REFCLK_IN (500 MHz), SYSREF_FABRIC =
+//     LMK04828 SYS_REF_FPGA. pll_ref_clk (data clock MMCM) is 125 MHz; the
+//     base reference clock (PPS generation) is pll_ref_clk / 5 = 25 MHz.
 //   - One QSFP28 (QSFP0, 100 GbE), refclk QSFP0_REFCLK (156.25 MHz).
 //   - No motherboard / daughterboard CPLDs, DB GPIO, DIO, GPS, PPS input,
 //     trigger I/O, DRAM, iPass or eCPRI clock output: the related logic is kept
@@ -182,7 +182,7 @@ module rfsoc4x2 (
     .BUFGCE_DIVIDE(5),
     .SIM_DEVICE("ULTRASCALE_PLUS")
   ) bufgce_div_base_ref_clk (
-    .I   (pll_ref_clk_in),
+    .I   (pll_ref_clk),
     .CLR (1'b0),
     .CE  (1'b1),
     .O   (base_ref_clk)

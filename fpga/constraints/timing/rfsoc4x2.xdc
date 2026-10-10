@@ -2,13 +2,14 @@
 # RFSoC 4x2 timing constraints, adapted from the X4xx constraints
 # (constraints/timing/{common,x440,x440_clocks,shared_constants}, Copyright Ettus
 # Research, LGPL-3.0-or-later) for the RFSoC 4x2 clocking: PLL_REFCLK_FPGA
-# 125 MHz, base reference clock = PLL_REFCLK_FPGA / 5 (BUFGCE_DIV), QSFP0
+# 500 MHz, pll_ref_clk (data clock MMCM) 125 MHz, base reference clock =
+# pll_ref_clk / 5 (BUFGCE_DIV), QSFP0
 # refclk 156.25 MHz, no CPLD / DB GPIO / DIO / trigger / PPS / LMK sync pins.
 #
 
 # Clocks -------------------------------------------------------------------
-set pll_ref_clk_period 8.000
-create_clock -name pll_ref_clk -period $pll_ref_clk_period [get_ports PLL_REFCLK_FPGA_P]
+create_clock -name pll_ref_clk -period 2.000 [get_ports PLL_REFCLK_FPGA_P]
+set pll_ref_clk_period 8.000   ;# MMCM pll_ref_clk_out (125 MHz)
 
 set ref_clk_period 40.000
 create_generated_clock -name ref_clk -divide_by 5 \

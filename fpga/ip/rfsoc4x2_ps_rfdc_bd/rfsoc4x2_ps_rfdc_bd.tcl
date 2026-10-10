@@ -17,8 +17,9 @@
 #      Bonded on the RFSoC 4x2: ADC 224 ch0/ch1 (ADC_C/ADC_D), ADC 226 ch0/ch1
 #      (ADC_A/ADC_B), DAC 228 ch0 (DAC_A), DAC 230 ch0 (DAC_B), i.e. ports 0/1
 #      (RX) and port 0 (TX) of each radio.
-#   3. Data clock MMCM: pll_ref_clk 125 MHz from the LMK04828 (its output
-#      dividers cannot make MCR/8 = 62.5 MHz), radio clocks for MCR 500 MS/s.
+#   3. Data clock MMCM: input = LMK04828 FPGA_REFCLK at 500 MHz (the board's
+#      validated LMK setting), pll_ref_clk_out 125 MHz, radio clocks for MCR
+#      500 MS/s (62.5 / 125 MHz).
 #
 # Expects: env X440_BD_TCL = X440 BD script from bd_retarget.py --rfsoc4x2; an open project with the
 # X440 HDL sources (hdl_sources.tcl) and an empty current BD design.
@@ -102,14 +103,14 @@ foreach {t c vpin} {
   228 0 vout00  228 1 vout02  229 0 vout10  229 1 vout12
   230 0 vout20  230 1 vout22  231 0 vout30  231 1 vout32
 } {
-  set name dac_tile${t}_ch${c}_vout
-  create_bd_intf_pin -mode Master -vlnv xilinx.com:interface:diff_analog_io_rtl:1.0 $name
-  connect_bd_intf_net [get_bd_intf_pins rf_data_converter/$vpin] [get_bd_intf_pins $name]
+  set pin_name dac_tile${t}_ch${c}_vout
+  create_bd_intf_pin -mode Master -vlnv xilinx.com:interface:diff_analog_io_rtl:1.0 $pin_name
+  connect_bd_intf_net [get_bd_intf_pins rf_data_converter/$vpin] [get_bd_intf_pins $pin_name]
 }
 
 # Converter reference clocks: only ADC 226 and DAC 230
-foreach name {adc0_clk adc1_clk adc3_clk dac0_clk dac1_clk} {
-  delete_bd_objs [get_bd_intf_pins -quiet $name]
+foreach pin_name {adc0_clk adc1_clk adc3_clk dac0_clk dac1_clk} {
+  delete_bd_objs [get_bd_intf_pins -quiet $pin_name]
 }
 create_bd_intf_pin -mode Slave -vlnv xilinx.com:interface:diff_clock_rtl:1.0 dac2_clk
 connect_bd_intf_net [get_bd_intf_pins adc2_clk] [get_bd_intf_pins rf_data_converter/adc2_clk]
@@ -128,15 +129,15 @@ foreach pin [get_bd_pins -of $rf -filter {DIR == I}] {
 }
 current_bd_instance /
 
-foreach name {adc0_clk adc1_clk adc3_clk dac0_clk dac1_clk} {
-  delete_bd_objs [get_bd_intf_ports -quiet $name]
+foreach pin_name {adc0_clk adc1_clk adc3_clk dac0_clk dac1_clk} {
+  delete_bd_objs [get_bd_intf_ports -quiet $pin_name]
 }
 make_bd_intf_pins_external [get_bd_intf_pins rfdc/dac2_clk]
 set_property name dac2_clk [get_bd_intf_ports dac2_clk_0]
 foreach {t c} {228 0 228 1 229 0 229 1 230 0 230 1 231 0 231 1} {
-  set name dac_tile${t}_ch${c}_vout
-  make_bd_intf_pins_external [get_bd_intf_pins rfdc/$name]
-  set_property name $name [get_bd_intf_ports ${name}_0]
+  set pin_name dac_tile${t}_ch${c}_vout
+  make_bd_intf_pins_external [get_bd_intf_pins rfdc/$pin_name]
+  set_property name $pin_name [get_bd_intf_ports ${pin_name}_0]
 }
 set_property CONFIG.FREQ_HZ 500000000 [get_bd_intf_ports adc2_clk]
 set_property CONFIG.FREQ_HZ 500000000 [get_bd_intf_ports dac2_clk]
@@ -144,9 +145,9 @@ set_property CONFIG.FREQ_HZ 500000000 [get_bd_intf_ports dac2_clk]
 # ---------------------------------------------------------------------------
 # 3. Data clock MMCM
 # ---------------------------------------------------------------------------
-set_property CONFIG.FREQ_HZ 125000000 [get_bd_ports pll_ref_clk_in]
+set_property CONFIG.FREQ_HZ 500000000 [get_bd_ports pll_ref_clk_in]
 set_property -dict [list \
-  CONFIG.PRIM_IN_FREQ {125.000} \
+  CONFIG.PRIM_IN_FREQ {500.000} \
   CONFIG.CLKOUT1_REQUESTED_OUT_FREQ {125.000} \
   CONFIG.CLKOUT2_REQUESTED_OUT_FREQ {62.500} \
   CONFIG.CLKOUT3_REQUESTED_OUT_FREQ {62.500} \

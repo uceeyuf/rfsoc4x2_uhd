@@ -14,12 +14,12 @@
 #      Radio mapping (same structure as the X440, 4 ports per radio):
 #        radio0: ADC 224 ch0/ch1, 225 ch0/ch1   DAC 228 ch0/ch1, 229 ch0/ch1
 #        radio1: ADC 226 ch0/ch1, 227 ch0/ch1   DAC 230 ch0/ch1, 231 ch0/ch1
-#      Bonded on the RFSoC 4x2: ADC 224 ch0/ch1 (ADC_C/ADC_D), ADC 226 ch0/ch1
-#      (ADC_A/ADC_B), DAC 228 ch0 (DAC_A), DAC 230 ch0 (DAC_B), i.e. ports 0/1
-#      (RX) and port 0 (TX) of each radio.
-#   3. Data clock MMCM: input = LMK04828 FPGA_REFCLK at 500 MHz (the board's
-#      validated LMK setting), pll_ref_clk_out 125 MHz, radio clocks for MCR
-#      500 MS/s (62.5 / 125 MHz).
+#      Bonded on the RFSoC 4x2: ADC 224 ch0/ch1 (ADC_D/ADC_C), ADC 226 ch0/ch1
+#      (ADC_B/ADC_A), DAC 228 ch0 (DAC_B), DAC 230 ch0 (DAC_A) (RFSoC 4x2
+#      reference manual), i.e. ports 0/1 (RX) and port 0 (TX) of each radio.
+#   3. Data clock MMCM: input = LMK04828 OUT8 (FPGA_REFCLK) at 125 MHz,
+#      pll_ref_clk_out 125 MHz (same as the input, as on the X440), radio clocks
+#      for MCR 500 MS/s (62.5 / 125 MHz).
 #
 # Expects: env X440_BD_TCL = X440 BD script from bd_retarget.py --rfsoc4x2; an open project with the
 # X440 HDL sources (hdl_sources.tcl) and an empty current BD design.
@@ -150,9 +150,9 @@ set_property CONFIG.FREQ_HZ 500000000 [get_bd_intf_ports dac2_clk]
 # ---------------------------------------------------------------------------
 # 3. Data clock MMCM
 # ---------------------------------------------------------------------------
-set_property CONFIG.FREQ_HZ 500000000 [get_bd_ports pll_ref_clk_in]
+set_property CONFIG.FREQ_HZ 125000000 [get_bd_ports pll_ref_clk_in]
 set_property -dict [list \
-  CONFIG.PRIM_IN_FREQ {500.000} \
+  CONFIG.PRIM_IN_FREQ {125.000} \
   CONFIG.CLKOUT1_REQUESTED_OUT_FREQ {125.000} \
   CONFIG.CLKOUT2_REQUESTED_OUT_FREQ {62.500} \
   CONFIG.CLKOUT3_REQUESTED_OUT_FREQ {62.500} \

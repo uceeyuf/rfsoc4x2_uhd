@@ -66,10 +66,10 @@ sub("""//
 //   - RFDC: refclk only on ADC 226 / DAC 230 (500 MHz from the LMX2594s), see
 //     ip/rfsoc4x2_ps_rfdc_bd. DB0 = radio0 = ADC 224/225, DAC 228/229;
 //     DB1 = radio1 = ADC 226/227, DAC 230/231. Bonded on the board: DB0_RX[1:0]
-//     (ADC_C/ADC_D), DB1_RX[1:0] (ADC_A/ADC_B), DB0_TX[0] (DAC_A), DB1_TX[0]
-//     (DAC_B).
-//   - PLL_REFCLK_FPGA = LMK04828 FPGA_REFCLK_IN (500 MHz), SYSREF_FABRIC =
-//     LMK04828 SYS_REF_FPGA. pll_ref_clk (data clock MMCM) is 125 MHz; the
+//     (ADC_D/ADC_C), DB1_RX[1:0] (ADC_B/ADC_A), DB0_TX[0] (DAC_B), DB1_TX[0]
+//     (DAC_A).
+//   - PLL_REFCLK_FPGA = LMK04828 OUT8 (FPGA_REFCLK_IN, 125 MHz), SYSREF_FABRIC
+//     = LMK04828 OUT9. pll_ref_clk (data clock MMCM output) is 125 MHz too; the
 //     base reference clock (PPS generation) is pll_ref_clk / 5 = 25 MHz.
 //   - One QSFP28 (QSFP0, 100 GbE), refclk QSFP0_REFCLK (156.25 MHz).
 //   - No motherboard / daughterboard CPLDs, DB GPIO, DIO, GPS, PPS input,

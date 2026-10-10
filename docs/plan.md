@@ -64,13 +64,18 @@ docs/         notes and results
   62.5 MHz; 500 MHz refclk on ADC 226 / DAC 230 only, PLLs distribute; all tiles enabled (SYSREF
   chain). ZU48DR DAC tiles 228..231 are dual (slices 0/2), so the X440 radio structure is kept:
   radio0 = ADC 224/225 + DAC 228/229, radio1 = ADC 226/227 + DAC 230/231, 4 ports each.
-  Bonded: radio0 RX ports 0/1 = ADC_C/ADC_D, TX port 0 = DAC_A; radio1 RX 0/1 = ADC_A/ADC_B,
-  TX 0 = DAC_B.
-* Clocking: LMK04828 FPGA_REFCLK stays at the validated 500 MHz (`rfsoc4x2_mts` register set,
-  VCO 3000 MHz, DCLK dividers 6); the data clock MMCM makes pll_ref_clk 125 MHz and the radio
-  clocks 62.5 / 125 MHz; base reference (PPS) = pll_ref_clk / 5 = 25 MHz (BUFGCE_DIV).
-  LMK change needed: SYSREF_DIV 600 (5 MHz) -> 384 (7.8125 MHz), since SYSREF must divide the
-  62.5 MHz RFDC stream clocks.
+  Bonded (RFSoC 4x2 reference manual): radio0 RX ports 0/1 = ADC_D/ADC_C (tile 224 ch0/ch1),
+  TX port 0 = DAC_B (228); radio1 RX 0/1 = ADC_B/ADC_A (226 ch0/ch1), TX 0 = DAC_A (230).
+* Clocking (RFSoC 4x2 reference manual, Fig. 5): LMK04828 OUT8 = FPGA_REFCLK, OUT9 = PL SYSREF,
+  OUT3 = RFDC analog SYSREF (DAC 230), OUT0 / OUT4 = LMX2594 references (ADC LMX: A -> 226,
+  B -> 224; DAC LMX: A -> 230, B -> 228), OUT1 / OUT5 = LMX SYNC. Starting from the
+  `rfsoc4x2_mts` register set (VCO 3000 MHz, all DCLK dividers 6 = 500 MHz):
+  * DCLKout8 divider 6 -> 24 (reg 0x120: 0x66 -> 0x78): FPGA_REFCLK 125 MHz, the data clock MMCM
+    input and pll_ref_clk (same frequency, as on the X440, so the PL SYSREF capture phase is fixed).
+  * SYSREF_DIV 600 -> 384 (reg 0x13A/0x13B: 0x02/0x58 -> 0x01/0x80): 7.8125 MHz, divides the
+    62.5 MHz RFDC stream clocks (5 MHz does not).
+  Radio clocks 62.5 / 125 MHz; base reference (PPS) = pll_ref_clk / 5 = 25 MHz (BUFGCE_DIV).
+  First synthesis with a 500 MHz MMCM input failed timing on SYSREF_FABRIC (2 ns requirement).
 * `bd_retarget.py --rfsoc4x2` appends the 4x2 RFDC settings to the X440 RFDC configuration and
   drops the 22 RFDC connections that do not exist on xczu48dr (rebuilt by the overlay).
 * Other BDs (eth_100g, axi_eth_dma, axi_interconnect_{eth,dma,app}) regenerate in 2023.2

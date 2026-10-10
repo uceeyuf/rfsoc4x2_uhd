@@ -2,8 +2,8 @@
 # with four ports each at 400 MHz bandwidth (MCR 500 MS/s), no DDC/DUC blocks.
 # Based on x440_CG_400_rfnoc_image_core.yml (UHD v4.11.0.0, Ettus Research,
 # LGPL-3.0-or-later).
-# Bonded RFSoC 4x2 converters: radio0 RX 0/1 = ADC_C/ADC_D, TX 0 = DAC_A;
-# radio1 RX 0/1 = ADC_A/ADC_B, TX 0 = DAC_B. The other ports are kept so the
+# Bonded RFSoC 4x2 converters: radio0 RX 0/1 = ADC_D/ADC_C, TX 0 = DAC_B;
+# radio1 RX 0/1 = ADC_B/ADC_A, TX 0 = DAC_A. The other ports are kept so the
 # channel numbering matches the X440; their endpoints get small buffers.
 schema: rfnoc_imagebuilder_args
 copyright: >-

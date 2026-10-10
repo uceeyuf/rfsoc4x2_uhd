@@ -2,20 +2,20 @@
 # RFSoC 4x2 timing constraints, adapted from the X4xx constraints
 # (constraints/timing/{common,x440,x440_clocks,shared_constants}, Copyright Ettus
 # Research, LGPL-3.0-or-later) for the RFSoC 4x2 clocking: PLL_REFCLK_FPGA
-# 500 MHz, pll_ref_clk (data clock MMCM) 125 MHz, base reference clock =
-# pll_ref_clk / 5 (BUFGCE_DIV), QSFP0
+# 125 MHz (LMK04828 OUT8), base reference clock = pll_ref_clk / 5 (BUFGCE_DIV),
+# QSFP0
 # refclk 156.25 MHz, no CPLD / DB GPIO / DIO / trigger / PPS / LMK sync pins.
 #
 
 # Clocks -------------------------------------------------------------------
-create_clock -name pll_ref_clk -period 2.000 [get_ports PLL_REFCLK_FPGA_P]
-set pll_ref_clk_period 8.000   ;# MMCM pll_ref_clk_out (125 MHz)
+set pll_ref_clk_period 8.000
+create_clock -name pll_ref_clk -period $pll_ref_clk_period [get_ports PLL_REFCLK_FPGA_P]
 
 set ref_clk_period 40.000
 create_generated_clock -name ref_clk -divide_by 5 \
   -source [get_pins bufgce_div_base_ref_clk/I] [get_pins bufgce_div_base_ref_clk/O]
 
-create_clock -name mgt_ref_0 -period 6.400 [get_ports QSFP0_REFCLK_P]
+# QSFP0_REFCLK_P (156.25 MHz): created by the CMAC IP constraints
 
 create_clock -name clk100 -period 10.000 \
   [get_pins -of_objects [get_cells -hierarchical {*PS8_i}] -filter {NAME =~ *PLCLK[0]}]
@@ -29,16 +29,14 @@ create_clock -name clk200 -period  5.000 \
 create_generated_clock -name ce_clk [get_pins {ce_clk_gen_i/CLKOUT0}]
 
 # MGT clock crossings (as X4xx) --------------------------------------------
-set rxoutclk [get_clocks -quiet -of_objects [get_pins -hierarchical -filter {NAME =~ */channel_inst/*_CHANNEL_PRIM_INST/RXOUTCLK}]]
-set txoutclk [get_clocks -quiet -of_objects [get_pins -hierarchical -filter {NAME =~ */channel_inst/*_CHANNEL_PRIM_INST/TXOUTCLK}]]
-if {[llength $rxoutclk] && [llength $txoutclk]} {
-  set_max_delay -from $rxoutclk -to $txoutclk -datapath_only 6.40
-  set_max_delay -from $txoutclk -to $rxoutclk -datapath_only 6.40
-  set_max_delay -from $rxoutclk -to [get_clocks clk100] -datapath_only 6.40
-  set_max_delay -from $txoutclk -to [get_clocks clk100] -datapath_only 6.40
-  set_max_delay -from [get_clocks clk100] -to $txoutclk -datapath_only 10.000
-  set_max_delay -from [get_clocks clk100] -to $rxoutclk -datapath_only 10.000
-}
+set rxoutclk [get_clocks -of_objects [get_pins -hierarchical -filter {NAME =~ */channel_inst/*_CHANNEL_PRIM_INST/RXOUTCLK}]]
+set txoutclk [get_clocks -of_objects [get_pins -hierarchical -filter {NAME =~ */channel_inst/*_CHANNEL_PRIM_INST/TXOUTCLK}]]
+set_max_delay -from $rxoutclk -to $txoutclk -datapath_only 6.40
+set_max_delay -from $txoutclk -to $rxoutclk -datapath_only 6.40
+set_max_delay -from $rxoutclk -to [get_clocks clk100] -datapath_only 6.40
+set_max_delay -from $txoutclk -to [get_clocks clk100] -datapath_only 6.40
+set_max_delay -from [get_clocks clk100] -to $txoutclk -datapath_only 10.000
+set_max_delay -from [get_clocks clk100] -to $rxoutclk -datapath_only 10.000
 
 # PPS: the delayed PPS crosses from the base reference to the PLL reference
 set_max_delay -from [get_cells -hierarchical pps_delayed_brc_reg] \

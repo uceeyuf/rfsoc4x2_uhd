@@ -3,8 +3,11 @@
 xrfdc driver bundled with UHD's MPM (v6.0, uhd/mpm/include/mpm/rfdc/xrfdc.h:
 packed structs, metal_phys_addr_t = 64 bit on aarch64).
 
-  rfdc_param_list.py decode <dtsi>      print the config in a .dtsi param-list
-  rfdc_param_list.py rfsoc4x2 <out>     write the RFSoC 4x2 param-list .dtsi
+  rfdc_param_list.py decode <dtsi>             print a v6.0 param-list (.dtsi)
+  rfdc_param_list.py decode-v12 <dtsi>         print a v12.1 param-list (Vivado/DTG)
+  rfdc_param_list.py from-dtg <pl.dtsi> <out>  convert the PetaLinux DTG (v12.1)
+                                               param-list of this design to v6.0
+  rfdc_param_list.py rfsoc4x2 <out>            hand-written RFSoC 4x2 values (v6.0)
 """
 import re
 import struct
@@ -45,6 +48,54 @@ def decode(blob):
     return cfg
 
 
+# rfdc v12.1 (Vivado/PetaLinux 2023.2): extra NCOFreq per digital block,
+# LinkCoupling per DAC tile, SiRevision in the header
+HDR12 = "<IQIIIIIII"
+DAC_TILE12 = "<IIdddIIIIdII"
+DAC_DIG12 = "<IIIIIId"
+ADC_DIG12 = "<IIIIId"
+SIZE12 = (struct.calcsize(HDR12)
+          + 4 * (struct.calcsize(DAC_TILE12) + 4 * struct.calcsize(DAC_AN) + 4 * struct.calcsize(DAC_DIG12))
+          + 4 * (struct.calcsize(TILE) + 4 * struct.calcsize(ADC_AN) + 4 * struct.calcsize(ADC_DIG12)))
+
+
+def decode_v12(blob):
+    """Decode a v12.1 param-list into the v6.0 dict (extra fields kept under _v12)."""
+    assert len(blob) == SIZE12, f"{len(blob)} bytes, expected {SIZE12} (v12.1)"
+    off = 0
+
+    def take(fmt):
+        nonlocal off
+        v = struct.unpack_from(fmt, blob, off)
+        off += struct.calcsize(fmt)
+        return v
+    h = take(HDR12)
+    cfg = dict(zip(["DeviceId", "BaseAddr", "ADCType", "MasterADCTile", "MasterDACTile",
+                    "ADCSysRefSource", "DACSysRefSource", "IPType"], h[:8]))
+    cfg["_v12"] = {"SiRevision": h[8]}
+    tiles = []
+    for _ in range(4):
+        v = take(DAC_TILE12)
+        t = dict(zip(TILE_KEYS, v[:11]))
+        t["_LinkCoupling"] = v[11]
+        t["Analog"] = [take(DAC_AN) for _ in range(4)]
+        dig = [take(DAC_DIG12) for _ in range(4)]
+        t["Digital"] = [d[:6] for d in dig]
+        t["_NCOFreq"] = [d[6] for d in dig]
+        tiles.append(t)
+    cfg["DAC"] = tiles
+    tiles = []
+    for _ in range(4):
+        t = dict(zip(TILE_KEYS, take(TILE)))
+        t["Analog"] = [take(ADC_AN) for _ in range(4)]
+        dig = [take(ADC_DIG12) for _ in range(4)]
+        t["Digital"] = [d[:5] for d in dig]
+        t["_NCOFreq"] = [d[5] for d in dig]
+        tiles.append(t)
+    cfg["ADC"] = tiles
+    return cfg
+
+
 def encode(cfg):
     out = struct.pack(HDR, *[cfg[k] for k in ["DeviceId", "BaseAddr", "ADCType", "MasterADCTile",
                                               "MasterDACTile", "ADCSysRefSource",
@@ -65,7 +116,7 @@ def read_dtsi(path):
 
 
 def rfsoc4x2():
-    """RFDC IP settings of fpga/ip/rfsoc4x2_ps_rfdc_bd (xczu48dr, Gen3 = IPType 2):
+    """Hand-written fallback (from-dtg is authoritative). RFDC IP settings of fpga/ip/rfsoc4x2_ps_rfdc_bd (xczu48dr, Gen3 = IPType 2):
     all ADC/DAC tiles at 4.0 GS/s, PLL on ADC tile 2 (226) and DAC tile 2 (230)
     from 500 MHz, the other tiles get the distributed sample clock; ADC: I/Q,
     x8 decimation, 8 words/cycle on slices 0/1 (dual tile: blocks 0/1);
@@ -111,5 +162,19 @@ if __name__ == "__main__":
                     print("   digital", t["Digital"])
             else:
                 print(k, hex(v) if k == "BaseAddr" else v)
+    elif sys.argv[1] in ("decode-v12", "from-dtg"):
+        cfg = decode_v12(read_dtsi(sys.argv[2]))
+        if sys.argv[1] == "from-dtg":
+            # The node address is in reg; keep BaseAddr as the DTG wrote it
+            open(sys.argv[3], "w").write(to_dtsi(encode(cfg)))
+        else:
+            for k, v in cfg.items():
+                if k in ("DAC", "ADC"):
+                    for i, t in enumerate(v):
+                        print(k, i, {kk: vv for kk, vv in t.items() if kk not in ("Analog", "Digital")})
+                        print("   analog ", t["Analog"])
+                        print("   digital", t["Digital"])
+                else:
+                    print(k, hex(v) if k == "BaseAddr" else v)
     elif sys.argv[1] == "rfsoc4x2":
         open(sys.argv[2], "w").write(to_dtsi(encode(rfsoc4x2())))

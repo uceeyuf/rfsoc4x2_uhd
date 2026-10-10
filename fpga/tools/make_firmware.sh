@@ -3,7 +3,8 @@
 # Package the FPGA image for MPM: build/firmware/rfsoc4x2.bin (bitstream for
 # the Linux FPGA manager) and build/firmware/x440.dtbo (device tree overlay that
 # MPM applies: product "x440"; it names rfsoc4x2.bin as firmware).
-#   fpga/tools/make_firmware.sh        (after fpga/build.sh impl)
+#   fpga/tools/make_firmware.sh   (after fpga/build.sh impl and petalinux-config
+#                                  --get-hw-description with its XSA)
 #
 set -e
 HERE=$(cd "$(dirname "$0")" && pwd)
@@ -31,7 +32,10 @@ python3 "$X400/tools/parse_versions_for_dts.py" \
   --input "$X400/regmap/x440/versioning_regs_regmap_utils.vh" \
   --output rfsoc4x2-version-info.dtsi \
   --components fpga,cpld_ifc,db_gpio_ifc,rf_core_full,rf_core_200m
-python3 "$ROOT/mpm/tools/rfdc_param_list.py" rfsoc4x2 rfsoc4x2-rfdc-params.dtsi
+# RFDC driver configuration: the PetaLinux device-tree generator writes it for
+# this XSA (rfdc v12.1 layout); MPM's bundled xrfdc driver needs the v6.0 layout.
+PL_DTSI=${PL_DTSI:-$ROOT/linux/petalinux/components/plnx_workspace/device-tree/device-tree/pl.dtsi}
+python3 "$ROOT/mpm/tools/rfdc_param_list.py" from-dtg "$PL_DTSI" rfsoc4x2-rfdc-params.dtsi
 
 # 3. Overlay
 cpp -nostdinc -undef -x assembler-with-cpp -D__DTS__ \

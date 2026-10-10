@@ -60,10 +60,17 @@ docs/         notes and results
 
 * `fpga/ip/rfsoc4x2_ps_rfdc_bd/`: X440 BD + RFSoC 4x2 PS preset (`gen_ps_preset.py` from the
   board files: GEM1, SD0, UART1, SPI0 SS0..2 = LMK04828 / LMX2594). PS part applies.
-* Open: RFDC. ZU48DR has DAC tiles 228..231 (2 ch) vs ZU28DR 228/229 (4 ch); the X440 RFDC
-  config is invalid there. Rewrite for the 4x2 (clocking as `rfsoc4x2_mts`: ADC 226 / DAC 230
-  PLL, distributed; bonded ADC 224/226 slices 0/2, DAC 228/230 ch 0) and remap the X440
-  radio ports: radio0 = ADC_A/ADC_B (tile 226) + DAC_A (228), radio1 = ADC_C/ADC_D (224) + DAC_B (230).
+* RFDC done (validates and generates on xczu48dr): 4.0 GS/s, x8 DDC/DUC, MCR 500 MS/s, fabric
+  62.5 MHz; 500 MHz refclk on ADC 226 / DAC 230 only, PLLs distribute; all tiles enabled (SYSREF
+  chain). ZU48DR DAC tiles 228..231 are dual (slices 0/2), so the X440 radio structure is kept:
+  radio0 = ADC 224/225 + DAC 228/229, radio1 = ADC 226/227 + DAC 230/231, 4 ports each.
+  Bonded: radio0 RX ports 0/1 = ADC_C/ADC_D, TX port 0 = DAC_A; radio1 RX 0/1 = ADC_A/ADC_B,
+  TX 0 = DAC_B. Data clock MMCM input (pll_ref_clk) 125 MHz: LMK04828 output dividers (max 32)
+  cannot make MCR/8 = 62.5 MHz.
+* `bd_retarget.py --rfsoc4x2` appends the 4x2 RFDC settings to the X440 RFDC configuration and
+  drops the 22 RFDC connections that do not exist on xczu48dr (rebuilt by the overlay).
+* Next: the remaining X4xx IP (eth_100g_bd for the 4x2 QSFP28, DMA, AXI interconnects) in
+  2023.2, then `rfsoc4x2.sv` (from `x4xx.sv`, X440 path, without CPLD / dboard / DIO / GPS).
 
 ## Prerequisites on the build host
 

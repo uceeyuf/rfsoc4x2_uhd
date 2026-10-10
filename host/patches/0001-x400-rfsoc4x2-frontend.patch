@@ -1,0 +1,169 @@
+RFSoC 4x2 direct-sampling front end (RFDC NCO tuning) for the X4xx radio
+control, selected by PID 0x4F42 (reported by MPM rfsoc4x2.py).
+
+--- a/host/lib/usrp/x400/x400_radio_control.cpp	2026-10-10 22:49:55.161906476 +0100
++++ b/host/lib/usrp/x400/x400_radio_control.cpp	2026-10-10 22:49:55.171199928 +0100
+@@ -16,6 +16,7 @@
+ #include <uhdlib/usrp/common/x4xx_ch_modes.hpp>
+ #include <uhdlib/usrp/cores/spi_core_4000.hpp>
+ #include <uhdlib/usrp/dboard/debug_dboard.hpp>
++#include <uhdlib/usrp/dboard/rfsoc4x2_dboard.hpp>
+ #include <uhdlib/usrp/dboard/fbx/fbx_dboard.hpp>
+ #include <uhdlib/usrp/dboard/hbx/hbx_dboard.hpp>
+ #include <uhdlib/usrp/dboard/null_dboard.hpp>
+@@ -182,6 +183,9 @@
+                 uhd::features::internal_sync(hbx_dboard->get_hbx_cpld_ctrl()));
+             register_feature(int_sync);
+         }
++    } else if (std::stol(pid) == uhd::rfnoc::RFSOC4X2_DB_PID) {
++        _daughterboard = std::make_shared<rfsoc4x2_dboard_impl>(
++            get_block_id().get_block_count(), get_unique_id(), _mb_control, get_tree());
+     } else if (std::stol(pid) == uhd::rfnoc::DEBUG_DB_PID) {
+         _daughterboard = std::make_shared<debug_dboard_impl>();
+     } else if (std::stol(pid) == uhd::rfnoc::IF_TEST_DBOARD_PID) {
+--- a/host/lib/include/uhdlib/usrp/dboard/rfsoc4x2_dboard.hpp	1970-01-01 01:00:00.000000000 +0100
++++ b/host/lib/include/uhdlib/usrp/dboard/rfsoc4x2_dboard.hpp	2026-10-10 22:49:55.162511247 +0100
+@@ -0,0 +1,143 @@
++//
++// Copyright 2026 Yijie Yu
++//
++// SPDX-License-Identifier: GPL-3.0-or-later
++//
++// RFSoC 4x2 direct-sampling front end for the X4xx radio control.
++//
++// The RFSoC 4x2 has no daughterboards: the converters connect to the SMA ports
++// through baluns. Each radio has two bonded RX converters and one bonded TX
++// converter (channels 0/1 and 0, identity RFDC mapping in the FPGA image).
++// Tuning is the RFDC NCO (fine mixer), set through MPM; there are no LOs,
++// gains, filters or antenna switches.
++//
++
++#pragma once
++
++#include <uhdlib/usrp/dboard/debug_dboard.hpp>
++#include <array>
++#include <string>
++
++namespace uhd { namespace rfnoc {
++
++//! PID that MPM (rfsoc4x2.py) reports for the RFSoC 4x2 front ends
++const static uint16_t RFSOC4X2_DB_PID = 0x4F42;
++
++class rfsoc4x2_dboard_impl : public debug_dboard_common_impl
++{
++public:
++    rfsoc4x2_dboard_impl(const size_t db_idx,
++        const std::string& unique_id,
++        std::shared_ptr<mpmd_mb_controller> mb_controller,
++        uhd::property_tree::sptr tree)
++        : _unique_id(unique_id), _db_idx(db_idx), _tree(tree)
++    {
++        UHD_ASSERT_THROW(mb_controller);
++        _rpcc = mb_controller->get_rpc_client();
++        UHD_ASSERT_THROW(_rpcc);
++        _conv_rate = _rpcc->get_dboard(_db_idx).get_dboard_sample_rate();
++        _init_frontend_subtree();
++    }
++
++    double get_converter_rate() const override
++    {
++        return _conv_rate;
++    }
++
++    // Antennas: the board labels of the bonded converters
++    std::string get_rx_antenna(const size_t chan) const override
++    {
++        return RX_LABELS.at(_db_idx).at(chan);
++    }
++    std::vector<std::string> get_rx_antennas(const size_t chan) const override
++    {
++        return {get_rx_antenna(chan)};
++    }
++    std::string get_tx_antenna(const size_t chan) const override
++    {
++        return TX_LABELS.at(_db_idx).at(chan);
++    }
++    std::vector<std::string> get_tx_antennas(const size_t chan) const override
++    {
++        return {get_tx_antenna(chan)};
++    }
++
++    // Frequency: RFDC NCO
++    double set_rx_frequency(const double freq, const size_t chan) override
++    {
++        return _rx_freq.at(chan) = _set_nco("rx", freq, chan);
++    }
++    double get_rx_frequency(const size_t chan) override
++    {
++        return _rx_freq.at(chan);
++    }
++    freq_range_t get_rx_frequency_range(const size_t) const override
++    {
++        return freq_range_t(0.0, _conv_rate);
++    }
++    double set_tx_frequency(const double freq, size_t chan) override
++    {
++        return _tx_freq.at(chan) = _set_nco("tx", freq, chan);
++    }
++    double get_tx_frequency(const size_t chan) override
++    {
++        return _tx_freq.at(chan);
++    }
++    freq_range_t get_tx_frequency_range(const size_t) const override
++    {
++        return freq_range_t(0.0, _conv_rate);
++    }
++
++private:
++    // [radio][channel]; radio0 = ADC tile 224 / DAC tile 228,
++    // radio1 = ADC tile 226 / DAC tile 230 (RFSoC 4x2 reference manual labels)
++    const std::array<std::array<std::string, 2>, 2> RX_LABELS = {
++        {{"ADC_D", "ADC_C"}, {"ADC_B", "ADC_A"}}};
++    const std::array<std::array<std::string, 2>, 2> TX_LABELS = {
++        {{"DAC_B", "NC"}, {"DAC_A", "NC"}}};
++
++    double _set_nco(const std::string& trx, const double freq, const size_t chan)
++    {
++        const double nco = _rpcc->get_dboard(_db_idx).rfdc_set_nco_freq(
++            trx, chan, freq, static_cast<uint32_t>(ch_mode::REAL));
++        RFNOC_LOG_DEBUG(trx << " chan " << chan << ": NCO " << nco / 1e6 << " MHz");
++        return nco;
++    }
++
++    void _init_frontend_subtree()
++    {
++        auto subtree = _tree->subtree(fs_path("dboard"));
++        for (size_t chan = 0; chan < 2; chan++) {
++            for (const std::string trx : {"rx", "tx"}) {
++                const fs_path fe_path =
++                    fs_path(trx + "_frontends") / std::to_string(chan);
++                const std::string antenna =
++                    trx == "rx" ? get_rx_antenna(chan) : get_tx_antenna(chan);
++                subtree->create<std::string>(fe_path / "name")
++                    .set("RFSoC4x2 " + antenna);
++                subtree->create<std::vector<std::string>>(fe_path / "antenna" / "options")
++                    .set({antenna});
++                subtree->create<meta_range_t>(fe_path / "freq" / "range")
++                    .set(freq_range_t(0.0, _conv_rate));
++                subtree->create<meta_range_t>(fe_path / "gains" / "all" / "range")
++                    .set(gain_range_t(0.0, 0.0, 1.0));
++                subtree->create<std::string>(fe_path / "connection").set("IQ");
++            }
++        }
++    }
++
++    const std::string _unique_id;
++    const size_t _db_idx;
++    uhd::property_tree::sptr _tree;
++    uhd::rpc_client::sptr _rpcc;
++    double _conv_rate = 0.0;
++    std::array<double, 2> _rx_freq{{0.0, 0.0}};
++    std::array<double, 2> _tx_freq{{0.0, 0.0}};
++
++    const std::string& get_unique_id() const
++    {
++        return _unique_id;
++    }
++};
++
++}} // namespace uhd::rfnoc

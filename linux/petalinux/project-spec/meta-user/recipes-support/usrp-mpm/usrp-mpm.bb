@@ -22,7 +22,7 @@ DEPENDS = "boost libmetal udev systemd python3 protobuf-native grpc-native \
 
 RDEPENDS:${PN} = "python3-core python3-modules python3-pyudev python3-grpcio \
                   python3-protobuf python3-pyroute2 libgpiod-python nftables \
-                  libmetal boost-system"
+                  libmetal boost-system bash"
 
 EXTRA_OECMAKE = " \
     -DMPM_DEVICE=x4xx \

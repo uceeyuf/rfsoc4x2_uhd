@@ -102,10 +102,26 @@ Vivado 2023.2 issues in the upstream sources, fixed by `fpga/patches/uhd/` (appl
 CMAC "evaluation license" warning: feature cmac_an_lt (AN/LT not included), same as in
 `rfsoc4x2_100g_udp`; harmless.
 
+## Status 2026-10-11 (not tested on the board)
+
+* FPGA (identity RFDC mapping, RFDC info memory for xczu48dr): timing met, WNS +0.256 ns,
+  WHS +0.009 ns; peak 24 GB in the 24 GB scope (at the limit).
+* PetaLinux 2023.2 image: BOOT.BIN, kernel, ext4 rootfs with MPM (x4xx + rfsoc4x2 classes,
+  gRPC stubs, pybind module, usrp-hwd service), `/lib/firmware/{rfsoc4x2.bin,x440.dtbo}`, udev
+  and networkd files. Target Python 3.10.
+* The RFDC param-list in the overlay is converted from the PetaLinux DTG output (v12.1) to the
+  v6.0 layout of MPM's xrfdc; the hand-written values had several DAC fields wrong.
+* MPM classes import on the host with stubbed target modules; clock policy checked.
+* Host: RFSoC 4x2 front-end patch (NCO tuning, PID 0x4F42); MPM still reports 0x4001 (debug
+  dboard) so an unmodified UHD 4.11 host can be used first. UHD 4.11 host needs protobuf/gRPC.
+* PetaLinux on Ubuntu 24.04: pseudo-native had to be built without glibc 2.38 C23 redirects
+  (`meta-user/recipes-devtools/pseudo`), otherwise every fakeroot task fails.
+
 ## Prerequisites on the build host
 
 * Python for `rfnoc_image_builder`: `python3-ruamel.yaml python3-mako python3-numpy`.
-* UHD host build: `cmake libboost-all-dev libusb-1.0-0-dev pybind11-dev python3-dev`; DPDK
+* UHD host build: `cmake libboost-all-dev libusb-1.0-0-dev pybind11-dev python3-dev libprotobuf-dev
+  protobuf-compiler libgrpc++-dev protobuf-compiler-grpc`; DPDK
   (`libdpdk-dev` 23.11 present).
 * PetaLinux 2023.2 installer only (no Yocto downloads / sstate needed online). Ubuntu 24.04 is
   not an official host: set `kernel.apparmor_restrict_unprivileged_userns=0` for bitbake.

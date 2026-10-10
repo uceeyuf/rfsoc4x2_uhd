@@ -1,8 +1,11 @@
 # RFSoC 4x2 BSP for the RFNoC image builder, derived from x440_bsp.yml (UHD
 # v4.11.0.0, Ettus Research, LGPL-3.0-or-later).
 # Same RFNoC device type as the X440 (X400 = 0xA400), so UHD's X4xx radio
-# control and MPM X4xx code apply. One QSFP28 (100 GbE), no DRAM, no front-panel
-# GPIO; two radios with four ports each (bonded: RX ports 0/1, TX port 0).
+# control and MPM X4xx code apply. The I/O ports are the X440's, so the
+# generated image core plugs into the unmodified x4xx_core.v; the RFSoC 4x2 has
+# one QSFP28 and no DRAM / front-panel GPIO, so qsfp1, dram0/1 and gpio0/1 stay
+# unconnected in its images. Two radios with four ports each at 400 MHz
+# (bonded: RX ports 0/1, TX port 0).
 type: rfsoc4x2
 type_id: A400
 family: ULTRASCALE
@@ -172,6 +175,18 @@ io_ports:
     rename:
       pattern: (.*)
       repl: \1_radio1
+  dram0:
+    type: axi4_mm
+    drive: slave
+    rename:
+      pattern: (.*)
+      repl: dram0_\1
+  dram1:
+    type: axi4_mm
+    drive: slave
+    rename:
+      pattern: (.*)
+      repl: dram1_\1
   serial:
     type: device_dna
     drive: listener
@@ -184,6 +199,12 @@ io_ports:
     rename:
       pattern: (.*)
       repl: qsfp0_\1
+  qsfp1:
+    type: x4xx_qsfp
+    drive: slave
+    rename:
+      pattern: (.*)
+      repl: qsfp1_\1
   chdr_dma_s:
     type: axis_chdr
     drive: slave
@@ -201,6 +222,24 @@ io_ports:
     rename:
       pattern: (.*)
       repl: m_dma_\1
+    required: recommended
+  gpio0:
+    type: gpio
+    drive: slave
+    parameters:
+      width: ${ config.device.parameters['FP_GPIO_BANK_WIDTH'] }
+    rename:
+      pattern: gpio(.*)
+      repl: gpio0\1
+    required: recommended
+  gpio1:
+    type: gpio
+    drive: slave
+    parameters:
+      width: ${ config.device.parameters['FP_GPIO_BANK_WIDTH'] }
+    rename:
+      pattern: gpio(.*)
+      repl: gpio1\1
     required: recommended
 
 default_secure_image_core:

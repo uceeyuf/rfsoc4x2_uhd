@@ -104,7 +104,9 @@ connections:
   - { srcblk: radio1, srcport: out_2, dstblk: ep6, dstport: in0 }
   - { srcblk: ep7, srcport: out0, dstblk: radio1, dstport: in_3 }
   - { srcblk: radio1, srcport: out_3, dstblk: ep7, dstport: in0 }
-  # BSP connections
+  # BSP connections (qsfp1, dram0/1: not connected)
+  - { srcblk: _device_,  srcport: _none_,     dstblk: _device_, dstport: gpio0 }
+  - { srcblk: _device_,  srcport: _none_,     dstblk: _device_, dstport: gpio1 }
   - { srcblk: radio0,    srcport: ctrlport,   dstblk: _device_, dstport: ctrlport_radio0 }
   - { srcblk: radio1,    srcport: ctrlport,   dstblk: _device_, dstport: ctrlport_radio1 }
   - { srcblk: _device_,  srcport: radio0,     dstblk: radio0,   dstport: radio }

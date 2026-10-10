@@ -113,6 +113,8 @@ set incdirs [lsort -unique $incdirs]
 
 add_files -fileset constrs_1 -norecurse [list $root/fpga/constraints/pins/rfsoc4x2.xdc \
   $root/fpga/constraints/timing/rfsoc4x2.xdc]
+add_files -fileset constrs_1 -norecurse $root/fpga/constraints/pins/rfsoc4x2_impl.xdc
+set_property used_in_synthesis false [get_files $root/fpga/constraints/pins/rfsoc4x2_impl.xdc]
 
 set git_hash [string range [exec git -C $root rev-parse HEAD] 0 7]
 set defs [list X440=1 RFNOC_IMAGE_CORE_HDR=$ic/rfnoc_image_core.vh \

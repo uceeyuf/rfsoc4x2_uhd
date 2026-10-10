@@ -1,0 +1,19 @@
+Remove the hierarchical reference from eth_100g.sv into the CMAC IP (recovered
+clock, unused on the RFSoC 4x2): with out-of-context IP synthesis it disconnects
+the GT pins in Vivado 2023.2.
+
+--- a/fpga/usrp3/top/x400/ip/eth_100g_bd/eth_100g.sv	2026-10-10 20:58:14.554795734 +0100
++++ b/fpga/usrp3/top/x400/ip/eth_100g_bd/eth_100g.sv	2026-10-10 20:58:14.568106896 +0100
+@@ -56,7 +56,11 @@
+ 
+   // Hierarchical reference (Xilinx says it will synthesize)
+   // eth_100g_bd_i/cmac_usplus_0/gt_rxrecclkout}
+-  assign rx_rec_clk_out = eth_100g_bd_i.cmac_usplus_0.gt_rxrecclkout[0];
++  // No hierarchical reference into the CMAC: with the IP synthesized out of
++  // context, Vivado 2023.2 adds a port to the black box for it and ties the
++  // GT serial and reference clock pins to constants (the MAC is then
++  // optimized away). The recovered clock is not used on the RFSoC 4x2.
++  assign rx_rec_clk_out = 1'b0;
+   //status registers
+   always_comb begin
+     phy_status = 0;

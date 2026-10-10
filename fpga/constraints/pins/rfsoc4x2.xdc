@@ -28,6 +28,4 @@ set_property -dict {PACKAGE_PIN AL21 IOSTANDARD LVCMOS18} [get_ports QSFP0_RESET
 set_property -dict {PACKAGE_PIN AL22 IOSTANDARD LVCMOS18} [get_ports QSFP0_MODPRS_n]
 set_property -dict {PACKAGE_PIN AN22 IOSTANDARD LVCMOS18} [get_ports QSFP0_LPMODE]
 
-# 100 GbE MAC next to the QSFP28 GTY quad (X0Y4..X0Y7). Replaces the X4xx
-# transport adapter constraint (qsfp_100gbe_port0.xdc: CMACE4_X0Y1).
-set_property LOC CMACE4_X0Y0 [get_cells -hierarchical -filter { PRIMITIVE_TYPE == ADVANCED.MAC.CMACE4 && PARENT =~ "*eth_qsfp0*" }]
+# The CMAC location is in rfsoc4x2_impl.xdc (implementation only).

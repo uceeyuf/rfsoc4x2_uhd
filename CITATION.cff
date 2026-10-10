@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use this work, please cite it as below."
+type: software
+title: "UHD for the RFSoC 4x2"
+authors:
+  - family-names: "Yu"
+    given-names: "Yijie"
+repository-code: "https://github.com/uceeyuf/rfsoc4x2_uhd"
+url: "https://github.com/uceeyuf/rfsoc4x2_uhd"
+date-released: 2026-10-10
+license: GPL-3.0-or-later
+keywords:
+  - "RFSoC"
+  - "UHD"
+  - "RFNoC"
+  - "USRP X440"
+  - "MPM"
+  - "100GbE"
+  - "FPGA"
+references:
+  - type: software
+    title: "UHD (USRP Hardware Driver)"
+    authors:
+      - name: "Ettus Research, a National Instruments Brand"
+    url: "https://github.com/EttusResearch/uhd"
+    version: "v4.11.0.0"

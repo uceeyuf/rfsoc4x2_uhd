@@ -48,11 +48,22 @@ docs/         notes and results
    `chdr_crossbar_nxn`, `eth_ipv4_interface_wrapper` (100 GbE widths) and
    `rfnoc_core_kernel` on xczu48dr without errors. Upstream X4xx BD scripts refuse to run
    outside 2021.1 (`scripts_vivado_version`), so all BD/IP are regenerated here.
+   X440 PS+RFDC BD: upstream Tcl retargeted by `fpga/tools/bd_retarget.py` sources, validates
+   and generates in 2023.2 on xczu28dr (IP upgrades fine).
 1. FPGA: `rfsoc4x2.sv` with PS + RFDC BD, `eth_100g_bd`, `axi_eth_dma_bd`, radio/timekeeper
    from `x4xx_core`, image core from `rfnoc_image_builder`.
 2. PetaLinux + MPM: periph manager (clocks, RFDC init and MTS, time sync), device tree.
 3. Host plugin: radio control; `uhd_usrp_probe`, `rx/tx_samples_to_file`, `benchmark_rate`.
 4. Results, README (EN + CN), citation.
+
+## Status of phase 1 (2026-10-10)
+
+* `fpga/ip/rfsoc4x2_ps_rfdc_bd/`: X440 BD + RFSoC 4x2 PS preset (`gen_ps_preset.py` from the
+  board files: GEM1, SD0, UART1, SPI0 SS0..2 = LMK04828 / LMX2594). PS part applies.
+* Open: RFDC. ZU48DR has DAC tiles 228..231 (2 ch) vs ZU28DR 228/229 (4 ch); the X440 RFDC
+  config is invalid there. Rewrite for the 4x2 (clocking as `rfsoc4x2_mts`: ADC 226 / DAC 230
+  PLL, distributed; bonded ADC 224/226 slices 0/2, DAC 228/230 ch 0) and remap the X440
+  radio ports: radio0 = ADC_A/ADC_B (tile 226) + DAC_A (228), radio1 = ADC_C/ADC_D (224) + DAC_B (230).
 
 ## Prerequisites on the build host
 

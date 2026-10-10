@@ -1,0 +1,9 @@
+--- a/mpm/python/usrp_mpm/periph_manager/__init__.py.in	2026-10-10 22:39:41.960905266 +0100
++++ b/mpm/python/usrp_mpm/periph_manager/__init__.py.in	2026-10-10 22:39:41.961859335 +0100
+@@ -14,4 +14,5 @@
+ from .base import PeriphManagerBase
+ 
+ # This is where the import magic happens
+-from .${MPM_DEVICE} import ${MPM_DEVICE} as periph_manager
++# RFSoC 4x2: X4xx MPM (MPM_DEVICE=x4xx) with the RFSoC 4x2 motherboard class
++from .rfsoc4x2 import rfsoc4x2 as periph_manager

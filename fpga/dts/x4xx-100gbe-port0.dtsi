@@ -1,4 +1,5 @@
 /*
+ * RFSoC 4x2 copy of the X4xx file (MAC address source changed).
  * Copyright 2021 Ettus Research, a National Instruments Brand
  *
  * SPDX-License-Identifier: LGPL-3.0-or-later
@@ -18,8 +19,9 @@
 		interrupt-names = "rx", "tx";
 		interrupt-parent = <&gic>;
 
-		nvmem-cells = <&eth1_addr>;
-		nvmem-cell-names = "address";
+		/* RFSoC 4x2: no motherboard EEPROM (X4xx: nvmem-cells = <&eth1_addr>).
+		 * Locally administered MAC; MPM/networkd may override it. */
+		local-mac-address = [02 4a 58 00 00 01];
 
 		status = "okay";
 

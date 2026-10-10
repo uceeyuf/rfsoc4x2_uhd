@@ -87,6 +87,21 @@ docs/         notes and results
 * Build: `fpga/build.sh rtl|synth|impl` (non-project Tcl, X440 source list from the upstream
   makefiles, retargeted BDs, `constraints/{pins,timing}/rfsoc4x2.xdc`).
 
+## FPGA build result (2026-10-10)
+
+`fpga/build.sh impl 2` (Vivado 2023.2, project mode, ~2.5 h, peak 23 GB): `build/rfsoc4x2/rfsoc4x2.bit`
+and `rfsoc4x2.xsa`. All timing constraints met: WNS +0.217 ns, WHS +0.010 ns, WPWS +0.448 ns.
+Utilization: LUT 56 %, FF 46 %, BRAM 16 %, URAM 45 %, DSP 12 %. CMAC at CMACE4_X0Y0, GTY X0Y4..X0Y7
+(QSFP lanes AA38/W38/U38/R38, refclk AA33). Not tested on the board yet.
+
+Vivado 2023.2 issues in the upstream sources, fixed by `fpga/patches/uhd/` (applied to copies):
+* 0001 `eth_ipv4_chdr_adapter.sv`: 2023.2 evaluates the `axi4s_fifo` parameter assertions (TKEEP).
+* 0002 `eth_100g.sv`: a hierarchical reference into the out-of-context CMAC made synthesis tie the
+  GT pins to constants (the MAC was then removed by opt_design without an error; only the
+  bitstream DRC on the unplaced QSFP ports caught it).
+CMAC "evaluation license" warning: feature cmac_an_lt (AN/LT not included), same as in
+`rfsoc4x2_100g_udp`; harmless.
+
 ## Prerequisites on the build host
 
 * Python for `rfnoc_image_builder`: `python3-ruamel.yaml python3-mako python3-numpy`.

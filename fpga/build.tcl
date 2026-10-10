@@ -83,6 +83,8 @@ foreach f $srcs {
   if {[lsearch {.xci .bd .xdc .sdc} $e] >= 0} continue
   # outputs of the upstream IP build (10 GbE PCS/PMA wrappers): not built here
   if {![file exists $f]} { puts "BUILDER: skipping missing $f"; continue }
+  # already added for a BD module reference (keep its file type)
+  if {[get_files -quiet $f] ne ""} { lappend incdirs [file dirname $f]; continue }
   lappend incdirs [file dirname $f]
   switch -- $e {
     .vhd     { add_files -norecurse $f; set_property file_type {VHDL 2008} [get_files $f] }

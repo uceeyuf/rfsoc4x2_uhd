@@ -109,7 +109,9 @@ puts "BUILDER: defines: $defs"
 set_property top $top [current_fileset]
 set_property include_dirs $incdirs [current_fileset]
 set_property verilog_define $defs [current_fileset]
-update_compile_order -fileset sources_1
+# Read every source, as the upstream non-project flow does: automatic compile
+# order drops the BD module-reference sources (library work) from the top level.
+set_property source_mgmt_mode None [current_project]
 
 # ---------------------------------------------------------------------------
 # Synthesis

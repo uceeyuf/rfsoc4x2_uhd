@@ -171,6 +171,48 @@ class Rfsoc4x2ClockCtrl(X4xxClockCtrl):
             MboardRegsControl.CLOCK_CTRL_PPS_INT_25MHz
         )
 
+    def configure_pps_forwarding(self, tk_idx, enable, radio_clock_rate, delay=1.0):
+        """PPS forwarding to the timekeepers, for a radio clock slower than PRC.
+
+        x4xx_pps_sync hands a one PRC cycle (125 MHz) PPS pulse to the radio
+        clock (62.5 MHz), which sees only every other PRC cycle; the X4xx radio
+        clocks are never slower than PRC. Which PRC cycle the pulse falls on
+        depends on the phase of the base reference divider (pll_ref_clk / 5),
+        set anew with every bitfile load. So: no PRC/RC multiplier
+        (divider 0), and if the timekeeper sees no PPS, move the pulse by one
+        PRC cycle.
+        """
+        regs = self.mboard_regs_control
+        div_shift = 0 if tk_idx == 0 else 16
+        with regs.regs:
+            # configure_pps_forwarding() ORs the divider into the register
+            crossing = regs.peek32(MboardRegsControl.MB_PPS_CROSSING_REG)
+            regs.poke32(
+                MboardRegsControl.MB_PPS_CROSSING_REG, crossing & ~(0x1F << div_shift)
+            )
+        prc_rate = self.get_prc_rate()
+        result = regs.configure_pps_forwarding(enable, tk_idx, prc_rate, prc_rate, delay)
+        if not enable:
+            return result
+        if self._tk_sees_pps(tk_idx):
+            return result
+        with regs.regs:
+            pps_ctrl = regs.peek32(MboardRegsControl.MB_PPS_CTRL) & 0x3FFFFFF
+            regs.poke32(MboardRegsControl.MB_PPS_CTRL, pps_ctrl - 1)
+        time.sleep(1.1)  # let a pending PPS pulse pass, as the X4xx code does
+        with regs.regs:
+            regs.poke32(MboardRegsControl.MB_PPS_CTRL, (pps_ctrl - 1) | (1 << 31))
+        if not self._tk_sees_pps(tk_idx):
+            self.log.warning(f"Timekeeper {tk_idx} gets no PPS.")
+        return result
+
+    def _tk_sees_pps(self, tk_idx, wait=1.3):
+        """True if the time of the last PPS of a timekeeper changes."""
+        regs = self.mboard_regs_control
+        last_pps = regs.get_timekeeper_time(tk_idx, True)
+        time.sleep(wait)
+        return regs.get_timekeeper_time(tk_idx, True) != last_pps
+
     def _lmk_lock_bits(self):
         return (
             self._lmk.peek8(self.LMK_RB_PLL1_LD) & 0x2,

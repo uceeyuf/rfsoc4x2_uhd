@@ -61,10 +61,10 @@ index e3b84f6fd..22c3d3a64 100644
              std::string("[X400] Invalid channel: ") + std::to_string(chan));
 diff --git a/host/lib/include/uhdlib/usrp/dboard/rfsoc4x2_dboard.hpp b/host/lib/include/uhdlib/usrp/dboard/rfsoc4x2_dboard.hpp
 new file mode 100644
-index 000000000..0ec207f56
+index 000000000..9680e03f7
 --- /dev/null
 +++ b/host/lib/include/uhdlib/usrp/dboard/rfsoc4x2_dboard.hpp
-@@ -0,0 +1,148 @@
+@@ -0,0 +1,165 @@
 +//
 +// Copyright 2026 Yijie Yu
 +//
@@ -77,13 +77,17 @@ index 000000000..0ec207f56
 +// (identity RFDC mapping): RX ports 0/1 and TX port 0 are the bonded
 +// converters, the other ports are converters that are not bonded out ("NC").
 +// Tuning is the RFDC NCO (fine mixer), set through MPM; there are no LOs,
-+// gains, filters or antenna switches.
++// gains, filters or antenna switches. After each tune the NCOs of the radio
++// are reset on a SYSREF edge (FPGA NCO reset, timed with the command time),
++// as the X4xx daughterboard experts do, so the NCO phases of the tiles agree.
 +//
 +
 +#pragma once
 +
++#include <uhdlib/usrp/common/x400_rfdc_control.hpp>
 +#include <uhdlib/usrp/dboard/debug_dboard.hpp>
 +#include <array>
++#include <functional>
 +#include <string>
 +
 +namespace uhd { namespace rfnoc {
@@ -97,9 +101,16 @@ index 000000000..0ec207f56
 +    rfsoc4x2_dboard_impl(const size_t db_idx,
 +        const std::string& unique_id,
 +        std::shared_ptr<mpmd_mb_controller> mb_controller,
++        x400::rfdc_control::sptr rfdcc,
++        std::function<uhd::time_spec_t(size_t)> time_accessor,
 +        uhd::property_tree::sptr tree)
-+        : _unique_id(unique_id), _db_idx(db_idx), _tree(tree)
++        : _unique_id(unique_id)
++        , _db_idx(db_idx)
++        , _tree(tree)
++        , _rfdcc(rfdcc)
++        , _time_accessor(time_accessor)
 +    {
++        UHD_ASSERT_THROW(_rfdcc);
 +        _num_chans = NUM_CHANS;
 +        UHD_ASSERT_THROW(mb_controller);
 +        _rpcc = mb_controller->get_rpc_client();
@@ -173,6 +184,10 @@ index 000000000..0ec207f56
 +        const double nco = _rpcc->get_dboard(_db_idx).rfdc_set_nco_freq(
 +            trx, chan, freq, static_cast<uint32_t>(ch_mode::REAL));
 +        RFNOC_LOG_DEBUG(trx << " chan " << chan << ": NCO " << nco / 1e6 << " MHz");
++        // Reset all NCOs of this radio on a SYSREF edge after the command time
++        using rfdc_type = x400::rfdc_control::rfdc_type;
++        _rfdcc->reset_ncos(
++            {trx == "rx" ? rfdc_type::RX0 : rfdc_type::TX0}, _time_accessor(chan));
 +        return nco;
 +    }
 +
@@ -202,6 +217,8 @@ index 000000000..0ec207f56
 +    const size_t _db_idx;
 +    uhd::property_tree::sptr _tree;
 +    uhd::rpc_client::sptr _rpcc;
++    x400::rfdc_control::sptr _rfdcc;
++    std::function<uhd::time_spec_t(size_t)> _time_accessor;
 +    double _conv_rate = 0.0;
 +    std::array<double, NUM_CHANS> _rx_freq{};
 +    std::array<double, NUM_CHANS> _tx_freq{};
@@ -214,7 +231,7 @@ index 000000000..0ec207f56
 +
 +}} // namespace uhd::rfnoc
 diff --git a/host/lib/usrp/x400/x400_radio_control.cpp b/host/lib/usrp/x400/x400_radio_control.cpp
-index c5f1cf5a9..13ab602ac 100644
+index c5f1cf5a9..be8fc1e76 100644
 --- a/host/lib/usrp/x400/x400_radio_control.cpp
 +++ b/host/lib/usrp/x400/x400_radio_control.cpp
 @@ -16,6 +16,7 @@
@@ -225,13 +242,18 @@ index c5f1cf5a9..13ab602ac 100644
  #include <uhdlib/usrp/dboard/fbx/fbx_dboard.hpp>
  #include <uhdlib/usrp/dboard/hbx/hbx_dboard.hpp>
  #include <uhdlib/usrp/dboard/null_dboard.hpp>
-@@ -182,6 +183,9 @@ x400_radio_control_impl::x400_radio_control_impl(make_args_ptr make_args)
+@@ -182,6 +183,14 @@ x400_radio_control_impl::x400_radio_control_impl(make_args_ptr make_args)
                  uhd::features::internal_sync(hbx_dboard->get_hbx_cpld_ctrl()));
              register_feature(int_sync);
          }
 +    } else if (std::stol(pid) == uhd::rfnoc::RFSOC4X2_DB_PID) {
 +        _daughterboard = std::make_shared<rfsoc4x2_dboard_impl>(
-+            get_block_id().get_block_count(), get_unique_id(), _mb_control, get_tree());
++            get_block_id().get_block_count(),
++            get_unique_id(),
++            _mb_control,
++            _rfdcc,
++            [this](const size_t instance) { return get_command_time(instance); },
++            get_tree());
      } else if (std::stol(pid) == uhd::rfnoc::DEBUG_DB_PID) {
          _daughterboard = std::make_shared<debug_dboard_impl>();
      } else if (std::stol(pid) == uhd::rfnoc::IF_TEST_DBOARD_PID) {

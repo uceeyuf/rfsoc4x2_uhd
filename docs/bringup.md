@@ -110,8 +110,17 @@ same timed 4096-sample QPSK burst on both DACs, NCOs at 1 GHz, 500 MS/s:
   sample between initializations);
 - received spectrum inverted against the sent one (TX/RX NCO conventions);
   ADC_D inverted (balun) as known from rfsoc4x2_mts;
-- phase difference between the loops: one of 5 values 72 deg apart from one MPM
-  start to the next (NCO reset not aligned between tiles), stable within a start.
+- phase difference between the loops: first one of 5 values 72 deg apart from
+  one MPM start to the next. The X4xx daughterboard experts reset the NCOs
+  after tuning (FPGA NCO reset on a SYSREF edge, timed); the RFSoC 4x2 front end
+  of the host patch now does the same. With it: -178 +- 3 deg after every MPM
+  restart (180 deg = ADC_D polarity).
+- "Board 0 may not be getting a PPS signal" on host sync, after about half of
+  the MPM starts: x4xx_pps_sync hands a one PRC cycle (125 MHz) PPS pulse to the
+  62.5 MHz radio clock, which misses it on every other PRC cycle; which one
+  depends on the base reference divider phase of each bitfile load. MPM
+  (rfsoc4x2_clocking) uses PRC/RC divider 0 and moves the pulse by one PRC
+  cycle when a timekeeper sees no PPS.
 
-Open: NCO phase alignment between tiles, occasional "Board 0 may not be getting a
-PPS signal" on host sync, spectral inversion / ADC_D polarity, DPDK streaming.
+Open: spectral inversion / ADC_D polarity, common-mode loop delay toggling by
+54 ps between MPM starts, DPDK streaming.

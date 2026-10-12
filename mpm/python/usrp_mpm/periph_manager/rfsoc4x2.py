@@ -51,6 +51,25 @@ class Rfsoc4x2CtrlportRegs(CtrlportRegs):
             pass
 
 
+class Rfsoc4x2XportMgrUDP(X400XportMgrUDP):
+    """X4xx UDP transport manager with the real speed of the 100 GbE port.
+
+    The kernel reports the nixge fixed-link speed for sfp0, which is 1000 on
+    this kernel (swphy takes 10/100/1000 only). UHD sizes the frames and
+    buffers of a link from its rate: 1 GbE means 1500-byte frames and buffers
+    for 125 MB/s.
+    """
+
+    SFP_LINK_SPEED = 100000  # Mb/s: CMAC on the QSFP28
+
+    def _init_interfaces(self, possible_ifaces):
+        ifaces = super()._init_interfaces(possible_ifaces)
+        for name, info in ifaces.items():
+            if self.iface_config.get(name, {}).get("type") == "sfp":
+                info["link_speed"] = self.SFP_LINK_SPEED
+        return ifaces
+
+
 class rfsoc4x2(x4xx):
     """RFSoC 4x2 running the X440-compatible UHD FPGA image."""
 
@@ -157,7 +176,7 @@ class rfsoc4x2(x4xx):
         self.ctrlport_regs = Rfsoc4x2CtrlportRegs(self.ctrlport_regs_label, self.log)
 
         self._xport_mgrs = {
-            "udp": X400XportMgrUDP(self.log, args),
+            "udp": Rfsoc4x2XportMgrUDP(self.log, args),
         }
         self._status_monitor_thread = threading.Thread(
             target=self._monitor_status,

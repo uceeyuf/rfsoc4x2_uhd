@@ -136,5 +136,22 @@ Known: every MPM restart (overlay removed and applied again) leaks the two
 fixed-link PHYs of the nixge ports; after about 15 restarts in one boot the
 nixge probe fails with -ENOSPC (no sfp0). Reboot the board.
 
+## 6. Full-rate streaming (DPDK)
+
+Host UHD built against DPDK 24.11 (`~/dpdk`; Ubuntu's 23.11 gives a
+ConnectX-4 without DevX one receive descriptor), configuration in
+`host/uhd-dpdk.conf`, run as root with hugepages. DPDK takes over all traffic
+of the QSFP28 port, so the MPM RPC goes over the 1 GbE ports: host
+192.168.30.1 <-> eth0 192.168.30.2 (rfsoc4x2-net: static address next to DHCP).
+
+- The kernel reports the nixge fixed-link speed (1000) for sfp0; MPM passed it
+  on as the link rate, and UHD used 1 GbE frames (1500 bytes, 352 samples) and
+  buffers. MPM (Rfsoc4x2XportMgrUDP) reports 100000 Mb/s for sfp0.
+- UHD's MTU discovery goes through the board CPU and finds 1500 bytes; the
+  CHDR path takes 8000-byte frames: `force_mtu=8000` (1984 samples per packet).
+
+benchmark_rate, 500 MS/s, 10 s: 1 x RX: 4999912264 samples, no drops; 2 x RX +
+2 x TX (64 Gb/s): no drops, no overruns, 6 underruns at the start of TX.
+
 Open: common-mode loop delay toggling by 54 ps between MPM starts, fixed-link
-PHY leak, DPDK streaming.
+PHY leak, MTU discovery through the board CPU.

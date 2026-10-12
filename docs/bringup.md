@@ -151,9 +151,12 @@ image at 3 GHz and its fundamental at 1 GHz alias onto each other in the ADC).
 Result after a fresh boot: delay difference +0.2 ps, phase difference +0.9 deg,
 correlation 0.97 on both loops, same in every session.
 
-Known: every MPM restart (overlay removed and applied again) leaks the two
-fixed-link PHYs of the nixge ports; after about 15 restarts in one boot the
-nixge probe fails with -ENOSPC (no sfp0). Reboot the board.
+Fixed-link PHY leak: every MPM restart (overlay removed and applied again)
+leaked the two fixed-link PHYs of the nixge ports; after about 15 restarts in
+one boot the nixge probe failed with -ENOSPC (no sfp0). nixge_remove() asked
+of_phy_is_fixed_link(), but the overlay removal detaches the fixed-link child
+node before the device node. Kernel patch (recipes-kernel/linux): remember the
+registration in probe. Checked: 2 fixed PHYs after 3 MPM restarts.
 
 ## 6. Full-rate streaming (DPDK)
 
@@ -172,5 +175,4 @@ of the QSFP28 port, so the MPM RPC goes over the 1 GbE ports: host
 benchmark_rate, 500 MS/s, 10 s: 1 x RX: 4999912264 samples, no drops; 2 x RX +
 2 x TX (64 Gb/s): no drops, no overruns, 6 underruns at the start of TX.
 
-Open: common-mode loop delay toggling by 54 ps between MPM starts, fixed-link
-PHY leak.
+Open: common-mode loop delay toggling by 54 ps between MPM starts.

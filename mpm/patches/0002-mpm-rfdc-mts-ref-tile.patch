@@ -1,0 +1,48 @@
+MPM RFDC: settable reference tile for the multi-tile synchronization
+(the RFSoC 4x2 distributes the converter clocks from tile 2).
+
+diff -ru a/mpm/include/mpm/rfdc/rfdc_ctrl.hpp b/mpm/include/mpm/rfdc/rfdc_ctrl.hpp
+--- a/mpm/include/mpm/rfdc/rfdc_ctrl.hpp	2026-10-12 22:39:33.906030782 +0100
++++ b/mpm/include/mpm/rfdc/rfdc_ctrl.hpp	2026-10-12 22:39:45.193089020 +0100
+@@ -690,6 +690,16 @@
+     uint32_t get_tile_latency(uint32_t tile_index, converter_options conv_option);
+ 
+     /**
++     * Sets the reference tile of the multi-tile synchronization (MTS) for one
++     * converter type. XRFdc_MultiConverter_Init() sets tile 0; a board whose
++     * converter clocks are distributed from another tile uses that tile.
++     *
++     * @param tile_index the reference tile
++     * @param conv_option the converter type (ADC or DAC)
++     */
++    void set_sync_ref_tile(uint32_t tile_index, converter_options conv_option);
++
++    /**
+      * Get post-sync offset between ADC or DAC tile and reference tile
+      *
+      * @param    tile_index specify ADC or DAC target tile
+@@ -818,6 +828,7 @@
+         .def("get_data_fifo_state", &rfdc_ctrl::get_data_fifo_state)
+         .def("clear_data_fifo_interrupts", &rfdc_ctrl::clear_data_fifo_interrupts)
+         .def("sync_tiles", &rfdc_ctrl::sync_tiles)
++        .def("set_sync_ref_tile", &rfdc_ctrl::set_sync_ref_tile)
+         .def("get_tile_latency", &rfdc_ctrl::get_tile_latency)
+         .def("get_tile_offset", &rfdc_ctrl::get_tile_offset)
+         .def("set_cal_frozen", &rfdc_ctrl::set_cal_frozen)
+diff -ru a/mpm/lib/rfdc/rfdc_ctrl.cpp b/mpm/lib/rfdc/rfdc_ctrl.cpp
+--- a/mpm/lib/rfdc/rfdc_ctrl.cpp	2026-10-12 22:39:33.908863780 +0100
++++ b/mpm/lib/rfdc/rfdc_ctrl.cpp	2026-10-12 22:39:33.918519017 +0100
+@@ -740,6 +740,13 @@
+                &rfdc_inst, conv_option ? XRFDC_DAC_TILE : XRFDC_ADC_TILE, sync_config);
+ }
+ 
++void rfdc_ctrl::set_sync_ref_tile(uint32_t tile_index, converter_options conv_option)
++{
++    XRFdc_MultiConverter_Sync_Config* sync_config = conv_option ? &rfdc_dac_sync_config
++                                                                : &rfdc_adc_sync_config;
++    sync_config->RefTile = tile_index;
++}
++
+ uint32_t rfdc_ctrl::get_tile_latency(uint32_t tile_index, converter_options conv_option)
+ {
+     XRFdc_MultiConverter_Sync_Config* sync_config = conv_option ? &rfdc_dac_sync_config

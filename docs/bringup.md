@@ -1,7 +1,7 @@
 # RFSoC 4x2 UHD: board bring-up
 
-Order of the build products and the first steps on the board. Nothing below has
-been run on hardware yet (status in `docs/plan.md`).
+Order of the build products and the first steps on the board. First run on the
+board: 2026-10-12 (findings at the end).
 
 ## 1. Build
 
@@ -58,7 +58,7 @@ Things most likely to need fixing on the first boot:
   addresses, which the overlay keeps.
 - LMK04828 lock readback (`ref_locked` sensor): if SPI readback is not available
   on this board, MPM reports locked and logs a warning once.
-- RFDC MTS (`sync_tiles`): SYSREF 7.8125 MHz from LMK OUT3 / OUT9.
+- RFDC MTS (`sync_tiles`): SYSREF 2.5 MHz from LMK OUT3 / OUT9.
 
 ## 4. Host
 
@@ -76,3 +76,27 @@ Bonded converters (identity RFDC mapping): radio0 RX ports 0/1 = ADC_D/ADC_C,
 TX port 0 = DAC_B; radio1 RX 0/1 = ADC_B/ADC_A, TX 0 = DAC_A. Master clock rate
 500 MS/s (400 MHz bandwidth image), 100 GbE on the QSFP28 (host: ConnectX-4,
 MTU 9000, DPDK for high rates).
+
+## 5. First board run (2026-10-12)
+
+Working: boot, MPM init, clocks locked (LEDs PLL1/PLL2, ADC, DAC on), overlay,
+`sfp0` 192.168.10.2 (100 GbE link up), `uhd_find_devices`, `uhd_usrp_probe`
+(host: `host/build.sh`, MPM front-end PID 0x4F42), RX samples over UDP.
+
+Fixed on the way:
+- LMK04828: the RFSoC-MTS 500 MHz register set runs PLL1 as a 0-delay loop fed
+  back from the SYSREF divider, so SYSREF_DIV and the CLKin R divider go
+  together; CLKin1 (Si5395 10 MHz) is selected manually, Status_LD1/2 show the
+  PLL1/PLL2 lock (`rfsoc4x2_clock_regs.py`). PLL1 takes tens of seconds to lock.
+- MPM must not touch LMK_RST outside programming (`reset_clock`).
+- `base_ref_clk` is divided from the PLL reference before the data clock MMCM:
+  MPM runs the PLL sync while the MMCM is in reset.
+- Xilinx kernel: the overlay fragment with `firmware-name` goes last; nixge
+  ignores `local-mac-address` (MACs from `rfsoc4x2-net` .link files); fixed-link
+  speed at most 1000; PetaLinux `80-wired.network` masked.
+- MPM runtime: python3-netaddr, -gevent (+ zope.interface, zope.event), -systemd.
+- ADC tiles 225 / 227 (not bonded out) stop in calibration: startup checks and
+  MTS use tiles 0 / 2, reference tile 2 (MPM patch 0002).
+
+Open: DAC MTS (bundled RFDC driver v6.0 computes DAC latencies of ~5e5 on the
+48DR), TX / loopback, DPDK streaming.

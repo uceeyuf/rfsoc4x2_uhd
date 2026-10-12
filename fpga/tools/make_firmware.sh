@@ -38,8 +38,15 @@ PL_DTSI=${PL_DTSI:-$ROOT/linux/petalinux/components/plnx_workspace/device-tree/d
 python3 "$ROOT/mpm/tools/rfdc_param_list.py" from-dtg "$PL_DTSI" rfsoc4x2-rfdc-params.dtsi
 
 # 3. Overlay
+# The fragment with firmware-name (rfsoc4x2-fpga.dtsi) goes last: the Xilinx
+# kernel's fpga-region accepts fragments without firmware-name, but rejects
+# every fragment after the one that programs the FPGA ("Region already has
+# overlay applied"). NI's kernel does not have this limit, so the upstream X4xx
+# overlays put it first.
+grep -v 'rfsoc4x2-fpga.dtsi' "$ROOT/build/image_core/device_tree.dts" > x440.top.dts
+echo '#include "rfsoc4x2-fpga.dtsi"' >> x440.top.dts
 cpp -nostdinc -undef -x assembler-with-cpp -D__DTS__ \
   -I "$OUT" -I "$ROOT/fpga/dts" -I "$X400/dts" \
-  "$ROOT/build/image_core/device_tree.dts" -o x440.pp.dts
+  x440.top.dts -o x440.pp.dts
 dtc -@ -I dts -O dtb -o x440.dtbo x440.pp.dts
 ls -l rfsoc4x2.bin x440.dtbo

@@ -72,8 +72,12 @@ docs/         notes and results
   `rfsoc4x2_mts` register set (VCO 3000 MHz, all DCLK dividers 6 = 500 MHz):
   * DCLKout8 divider 6 -> 24 (reg 0x120: 0x66 -> 0x78): FPGA_REFCLK 125 MHz, the data clock MMCM
     input and pll_ref_clk (same frequency, as on the X440, so the PL SYSREF capture phase is fixed).
-  * SYSREF_DIV 600 -> 384 (reg 0x13A/0x13B: 0x02/0x58 -> 0x01/0x80): 7.8125 MHz, divides the
-    62.5 MHz RFDC stream clocks (5 MHz does not).
+  * SYSREF_DIV 600 -> 1200 (reg 0x13A/0x13B: 0x02/0x58 -> 0x04/0xB0): 2.5 MHz, divides the
+    62.5 MHz RFDC stream clocks (5 MHz does not). PLL1 is a 0-delay loop fed back from the SYSREF
+    divider, so the CLKin R dividers go from 2 to 4 with it (reg 0x154/0x156), and CLKin1 (Si5395
+    10 MHz) is selected manually (reg 0x147: 0x4A -> 0x1A); Status_LD1/2 (LEDs PLL1/PLL2) show the
+    PLL1/PLL2 lock (reg 0x15F/0x16E). A first attempt with SYSREF_DIV 384 alone left PLL1
+    unlocked (board bring-up, 2026-10-12).
   Radio clocks 62.5 / 125 MHz; base reference (PPS) = pll_ref_clk / 5 = 25 MHz (BUFGCE_DIV).
   First synthesis with a 500 MHz MMCM input failed timing on SYSREF_FABRIC (2 ns requirement).
 * `bd_retarget.py --rfsoc4x2` appends the 4x2 RFDC settings to the X440 RFDC configuration and

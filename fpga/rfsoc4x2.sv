@@ -178,12 +178,14 @@ module rfsoc4x2 (
   );
 
   // Base reference clock (PPS generation): no separate reference on the
-  // RFSoC 4x2, so divide the PLL reference: 125 MHz / 5 = 25 MHz.
+  // RFSoC 4x2, so divide the PLL reference: 125 MHz / 5 = 25 MHz. Taken
+  // before the data clock MMCM: MPM holds the MMCM in reset during the PLL
+  // sync, which runs on base_ref_clk.
   BUFGCE_DIV #(
     .BUFGCE_DIVIDE(5),
     .SIM_DEVICE("ULTRASCALE_PLUS")
   ) bufgce_div_base_ref_clk (
-    .I   (pll_ref_clk),
+    .I   (pll_ref_clk_in),
     .CLR (1'b0),
     .CE  (1'b1),
     .O   (base_ref_clk)

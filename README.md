@@ -9,7 +9,7 @@
 
 A UHD port for the RealDigital **RFSoC 4x2** (xczu48dr), modelled on the Ettus USRP **X410 / X420 / X440** architecture of UHD 4.11: an RFNoC FPGA image with 100 GbE (QSFP28) and DMA, the Module Peripheral Manager (MPM) on PetaLinux, and the standard `mpmd` host driver. The FPGA keeps the X440 register map and RFNoC device type, so UHD's X4xx code applies; the board-specific parts (RFDC on a Gen3 device, LMK04828 / LMX2594 clocking, no CPLDs or daughterboards) are replaced.
 
-**Status (2026-10-10): FPGA image built, not yet tested on the board.** Vivado 2023.2, all timing constraints met (WNS +0.217 ns); PetaLinux 2023.2 base image built; MPM and the FPGA firmware packaging written.
+**Status (2026-10-12): first light on the board.** Vivado 2023.2, all timing constraints met (WNS +0.175 ns); PetaLinux 2023.2 boots, MPM initializes the clocks (LMK04828 PLL1/PLL2 and both LMX2594 locked), the RFDC and the FPGA; `uhd_find_devices` / `uhd_usrp_probe` work over 100 GbE with the patched host (2 radios x 4 ports) and RX samples reach the host. Not yet done: TX / loopback tests, DAC multi-tile sync (the RFDC driver bundled with MPM computes wrong DAC latencies on this Gen3 device), full-rate streaming with DPDK. Bring-up notes: [docs/bringup.md](./docs/bringup.md).
 
 　
 
@@ -22,7 +22,7 @@ A UHD port for the RealDigital **RFSoC 4x2** (xczu48dr), modelled on the Ettus U
 | Image | 2 radios x 4 ports, 400 MHz | same structure; bonded: RX ports 0/1, TX port 0 of each radio |
 | Converters | 4.096 GS/s, PLL per tile | 4.0 GS/s, x8 DDC/DUC, MCR 500 MS/s; PLLs of ADC 226 / DAC 230 distribute the clock |
 | Network | 2x QSFP28 | 1x QSFP28, 100 GbE (CMAC X0Y0, GTY X0Y4..X0Y7) |
-| Clocks | LMK04832, LMK03328, aux board | LMK04828 (FPGA_REFCLK 125 MHz, SYSREF 7.8125 MHz), 2x LMX2594 (500 MHz) |
+| Clocks | LMK04832, LMK03328, aux board | LMK04828 (FPGA_REFCLK 125 MHz, SYSREF 2.5 MHz), 2x LMX2594 (500 MHz) |
 | MPM | x4xx | x4xx subclass `rfsoc4x2` (no EEPROM, CPLD, aux board; fixed clocking) |
 
 Bonded converters: radio0 RX 0/1 = ADC_D/ADC_C, TX 0 = DAC_B; radio1 RX 0/1 = ADC_B/ADC_A, TX 0 = DAC_A.
@@ -75,7 +75,7 @@ GPL-3.0-or-later ([LICENSE](LICENSE)); files derived from UHD keep their notices
 
 为 RealDigital **RFSoC 4x2**（xczu48dr）移植 UHD，架构参照 UHD 4.11 中 Ettus USRP **X410 / X420 / X440**：RFNoC FPGA 镜像（100 GbE QSFP28 + DMA）、PetaLinux 上的 MPM，以及标准的 `mpmd` 主机驱动。FPGA 保留 X440 的寄存器映射和 RFNoC 设备类型，UHD 的 X4xx 代码可以直接复用；板级差异（第三代 RFDC、LMK04828 / LMX2594 时钟、没有 CPLD 和子板）单独替换。
 
-**状态（2026-10-10）：FPGA 已编译通过，尚未上板。** Vivado 2023.2，时序全部满足（WNS +0.217 ns）；PetaLinux 2023.2 基础镜像已构建；MPM 与 FPGA 固件打包已完成。
+**状态（2026-10-12）：板上初步跑通。** Vivado 2023.2，时序全部满足（WNS +0.175 ns）；PetaLinux 2023.2 启动，MPM 完成时钟（LMK04828 PLL1/PLL2 与两片 LMX2594 均锁定）、RFDC 与 FPGA 初始化；用打过补丁的主机端 UHD，经 100 GbE 运行 `uhd_find_devices` / `uhd_usrp_probe` 正常（2 个 radio × 4 端口），RX 数据可送到主机。尚未完成：TX / 回环测试、DAC 多 tile 同步（MPM 自带的 RFDC 驱动在这颗 Gen3 器件上算错 DAC 延迟）、DPDK 满速率收发。上板记录见 [docs/bringup.md](./docs/bringup.md)。
 
 　
 
@@ -88,7 +88,7 @@ GPL-3.0-or-later ([LICENSE](LICENSE)); files derived from UHD keep their notices
 | 镜像 | 2 个 radio × 4 口，400 MHz | 结构相同；引出的是每个 radio 的 RX 口 0/1、TX 口 0 |
 | 转换器 | 4.096 GS/s，每个 tile 单独 PLL | 4.0 GS/s，8 倍 DDC/DUC，MCR 500 MS/s；ADC 226 / DAC 230 的 PLL 分发时钟 |
 | 网络 | 2 个 QSFP28 | 1 个 QSFP28，100 GbE（CMAC X0Y0，GTY X0Y4..X0Y7） |
-| 时钟 | LMK04832、LMK03328、扩展板 | LMK04828（FPGA_REFCLK 125 MHz，SYSREF 7.8125 MHz），2 片 LMX2594（500 MHz） |
+| 时钟 | LMK04832、LMK03328、扩展板 | LMK04828（FPGA_REFCLK 125 MHz，SYSREF 2.5 MHz），2 片 LMX2594（500 MHz） |
 | MPM | x4xx | x4xx 子类 `rfsoc4x2`（无 EEPROM、CPLD、扩展板；固定时钟） |
 
 引出的转换器：radio0 RX 0/1 = ADC_D/ADC_C，TX 0 = DAC_B；radio1 RX 0/1 = ADC_B/ADC_A，TX 0 = DAC_A。

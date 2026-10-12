@@ -5,12 +5,22 @@
 #
 """RFSoC 4x2 clock chip register sets (24-bit SPI words, written in order).
 
-From the rfsoc4x2_mts design (TICS Pro files LMK04828_500.0 / LMX2594_500.0 of
-the RFSoC-PYNQ RFSoC4x2 board package), with two LMK04828 changes for the UHD
-image (RFSoC 4x2 reference manual, clocking figure: OUT8 = FPGA_REFCLK,
-OUT9 = PL SYSREF):
+From the RFSoC-MTS TICS Pro files LMK04828_500.0 / LMX2594_500.0
+(boards/RFSoC4x2/xrfclk, as in the rfsoc4x2_mts design), with these LMK04828
+changes for the UHD image (RFSoC 4x2 reference manual, clocking figure:
+OUT8 = FPGA_REFCLK, OUT9 = PL SYSREF):
   0x120: 0x66 -> 0x78  DCLKout8 divider 6 -> 24: FPGA_REFCLK 500 -> 125 MHz
-  0x13A/0x13B: 0x0258 -> 0x0180  SYSREF_DIV 600 -> 384: 5 -> 7.8125 MHz
+  0x13A/0x13B: 0x0258 -> 0x04B0  SYSREF_DIV 600 -> 1200: SYSREF 5 -> 2.5 MHz,
+      an integer fraction of the 62.5 MHz fabric clock (RFDC MTS)
+  0x154, 0x156: 0x02 -> 0x04  CLKin0_R / CLKin1_R 2 -> 4
+  0x147: 0x4A -> 0x1A  CLKin_SEL_MODE auto -> CLKin1 manual (Si5395 10 MHz),
+      as in the PYNQ LMK04828_245.76 file
+  0x15F: 0x3E -> 0x0B, 0x16E: 0x1B -> 0x13  Status_LD1 / Status_LD2 (LEDs
+      "PLL1" / "PLL2") = PLL1 / PLL2 lock detect, as in LMK04828_245.76
+PLL1 runs in 0-delay mode with the SYSREF divider as feedback (0x13F), so
+SYSREF_DIV and the CLKin R divider go together: 10 MHz / 4 = 3000 MHz / 1200.
+With SYSREF_DIV changed alone PLL1 never locks; in auto mode it locks only
+sometimes. PLL1 takes tens of seconds to lock after programming.
 LMK04828: VCO 3000 MHz. LMX2594 (both): 500 MHz to the RFDC (ADC tiles 224/226,
 DAC tiles 228/230).
 """
@@ -25,14 +35,14 @@ LMK04828_REGS = [
     0x011F03, 0x012078, 0x012155, 0x012255, 0x012301, 0x012422, 0x012500, 0x012670,
     0x012733, 0x012866, 0x012955, 0x012A55, 0x012B00, 0x012C22, 0x012D00, 0x012EF0,
     0x012F30, 0x013066, 0x013155, 0x013255, 0x013301, 0x013422, 0x013500, 0x013673,
-    0x013703, 0x013820, 0x013903, 0x013A01, 0x013B80, 0x013C00, 0x013D01, 0x013E03,
+    0x013703, 0x013820, 0x013903, 0x013A04, 0x013BB0, 0x013C00, 0x013D01, 0x013E03,
     0x013F0D, 0x014009, 0x014100, 0x014200, 0x014331, 0x0144DD, 0x01457F, 0x01461B,
-    0x01474A, 0x014806, 0x014946, 0x014A06, 0x014B06, 0x014C00, 0x014D00, 0x014EC0,
-    0x014F7F, 0x015013, 0x015102, 0x015200, 0x015300, 0x015402, 0x015500, 0x015602,
+    0x01471A, 0x014806, 0x014946, 0x014A06, 0x014B06, 0x014C00, 0x014D00, 0x014EC0,
+    0x014F7F, 0x015013, 0x015102, 0x015200, 0x015300, 0x015404, 0x015500, 0x015604,
     0x015703, 0x0158C0, 0x015900, 0x015A01, 0x015BDA, 0x015C20, 0x015D00, 0x015E00,
-    0x015F3E, 0x016000, 0x016120, 0x016244, 0x016300, 0x016400, 0x0165A0, 0x0171AA,
+    0x015F0B, 0x016000, 0x016120, 0x016244, 0x016300, 0x016400, 0x0165A0, 0x0171AA,
     0x017202, 0x017C15, 0x017D33, 0x016600, 0x016701, 0x01682C, 0x016959, 0x016A20,
-    0x016B00, 0x016C00, 0x016D00, 0x016E1B, 0x017300, 0x018200, 0x018300, 0x018400,
+    0x016B00, 0x016C00, 0x016D00, 0x016E13, 0x017300, 0x018200, 0x018300, 0x018400,
     0x018500, 0x018800, 0x018900, 0x018A00, 0x018B00, 0x1FFD00, 0x1FFE00, 0x1FFF53,
 ]
 
@@ -57,5 +67,5 @@ LMX2594_REGS = [
 ]
 
 FPGA_REFCLK_FREQ = 125e6
-SYSREF_FREQ = 3000e6 / 384
+SYSREF_FREQ = 3000e6 / 1200
 LMX2594_OUT_FREQ = 500e6

@@ -1,0 +1,8 @@
+# RFSoC 4x2 sfp0: QSFP28, 100 GbE (nixge). Fixed, locally administered MAC: the board has no
+# EEPROM (X4xx reads the MACs from it through nvmem), nixge ignores
+# local-mac-address and U-Boot picks a random one for GEM1 on every boot.
+[Match]
+Path=platform-1200000000.ethernet
+
+[Link]
+MACAddress=02:4a:58:00:00:01

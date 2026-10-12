@@ -1,5 +1,5 @@
 /*
- * RFSoC 4x2 copy of the X4xx file (MAC address source changed).
+ * RFSoC 4x2 copy of the X4xx file (MAC address source, fixed-link speed changed).
  * Copyright 2021 Ettus Research, a National Instruments Brand
  *
  * SPDX-License-Identifier: LGPL-3.0-or-later
@@ -28,7 +28,9 @@
 		phy-mode = "internal";
 
 		fixed-link {
-			speed = <100000>;
+			/* Xilinx kernel: swphy takes 10/100/1000 only (100000 fails with
+			 * "broken fixed-link"); carrier comes from link-gpios. */
+			speed = <1000>;
 			full-duplex;
 			link-gpios = <&gpio 94 0>;
 		};

@@ -29,11 +29,12 @@ from usrp_mpm.periph_manager.rfsoc4x2_rfdc_ctrl import Rfsoc4x2RfdcCtrl
 from usrp_mpm.periph_manager.x4xx import X400XportMgrUDP, x4xx
 from usrp_mpm.periph_manager.x4xx_periphs import CtrlportRegs, MboardRegsControl
 
-# PID reported for the two front ends. 0x4001 is the X4xx debug daughterboard,
-# which an unmodified UHD host drives as an inert front end (streaming, timed
-# commands; no frequency/gain control). The host patch for the RFSoC 4x2 front
-# end (NCO tuning) will use its own PID.
-RFSOC4X2_DB_PID = 0x4001
+# PID reported for the two front ends, handled by the RFSoC 4x2 front end of the
+# host patch (host/patches: 4 channels per radio as in the X440 image, RFDC NCO
+# tuning). An unmodified UHD host does not know this PID; the X4xx debug
+# daughterboard PID (0x4001) does not work either, as that front end has only 2
+# of the 4 channels per radio.
+RFSOC4X2_DB_PID = 0x4F42
 RFSOC4X2_SERIAL_FILE = "/etc/uhd/rfsoc4x2_serial"
 
 

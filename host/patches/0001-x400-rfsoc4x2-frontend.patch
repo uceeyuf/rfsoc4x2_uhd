@@ -1,29 +1,70 @@
 RFSoC 4x2 direct-sampling front end (RFDC NCO tuning) for the X4xx radio
-control, selected by PID 0x4F42 (reported by MPM rfsoc4x2.py).
+control, selected by PID 0x4F42 (reported by MPM rfsoc4x2.py); the debug
+dboard base class gets a configurable channel count (4 for the X440 image).
 
---- a/host/lib/usrp/x400/x400_radio_control.cpp	2026-10-10 22:49:55.161906476 +0100
-+++ b/host/lib/usrp/x400/x400_radio_control.cpp	2026-10-10 22:49:55.171199928 +0100
-@@ -16,6 +16,7 @@
- #include <uhdlib/usrp/common/x4xx_ch_modes.hpp>
- #include <uhdlib/usrp/cores/spi_core_4000.hpp>
- #include <uhdlib/usrp/dboard/debug_dboard.hpp>
-+#include <uhdlib/usrp/dboard/rfsoc4x2_dboard.hpp>
- #include <uhdlib/usrp/dboard/fbx/fbx_dboard.hpp>
- #include <uhdlib/usrp/dboard/hbx/hbx_dboard.hpp>
- #include <uhdlib/usrp/dboard/null_dboard.hpp>
-@@ -182,6 +183,9 @@
-                 uhd::features::internal_sync(hbx_dboard->get_hbx_cpld_ctrl()));
-             register_feature(int_sync);
+diff --git a/host/lib/include/uhdlib/usrp/dboard/debug_dboard.hpp b/host/lib/include/uhdlib/usrp/dboard/debug_dboard.hpp
+index e3b84f6fd..22c3d3a64 100644
+--- a/host/lib/include/uhdlib/usrp/dboard/debug_dboard.hpp
++++ b/host/lib/include/uhdlib/usrp/dboard/debug_dboard.hpp
+@@ -31,6 +31,11 @@ const static uint16_t IF_TEST_DBOARD_PID = 0x4006;
+  */
+ class debug_dboard_common_impl : public uhd::usrp::x400::x400_dboard_iface
+ {
++protected:
++    //! Channels per radio (2 on X4xx debug/IF test dboards; 4 for the RFSoC 4x2
++    //! front ends, which follow the X440 image with 4 ports per radio)
++    size_t _num_chans = 2;
++
+ public:
+     using sptr = std::shared_ptr<debug_dboard_common_impl>;
+ 
+@@ -84,32 +89,28 @@ public:
+ 
+     size_t get_num_rx_channels() const final
+     {
+-        return 2;
++        return _num_chans;
+     }
+ 
+     size_t get_num_tx_channels() const final
+     {
+-        return 2;
++        return _num_chans;
+     }
+ 
+     size_t get_chan_from_dboard_fe(const std::string& fe, direction_t) const final
+     {
+-        if (fe == "0") {
+-            return 0;
+-        }
+-        if (fe == "1") {
+-            return 1;
++        for (size_t chan = 0; chan < _num_chans; chan++) {
++            if (fe == std::to_string(chan)) {
++                return chan;
++            }
          }
-+    } else if (std::stol(pid) == uhd::rfnoc::RFSOC4X2_DB_PID) {
-+        _daughterboard = std::make_shared<rfsoc4x2_dboard_impl>(
-+            get_block_id().get_block_count(), get_unique_id(), _mb_control, get_tree());
-     } else if (std::stol(pid) == uhd::rfnoc::DEBUG_DB_PID) {
-         _daughterboard = std::make_shared<debug_dboard_impl>();
-     } else if (std::stol(pid) == uhd::rfnoc::IF_TEST_DBOARD_PID) {
---- a/host/lib/include/uhdlib/usrp/dboard/rfsoc4x2_dboard.hpp	1970-01-01 01:00:00.000000000 +0100
-+++ b/host/lib/include/uhdlib/usrp/dboard/rfsoc4x2_dboard.hpp	2026-10-10 22:49:55.162511247 +0100
-@@ -0,0 +1,143 @@
+         throw uhd::key_error(std::string("[X400] Invalid frontend: ") + fe);
+     }
+ 
+     std::string get_dboard_fe_from_chan(size_t chan, direction_t) const final
+     {
+-        if (chan == 0) {
+-            return "0";
+-        }
+-        if (chan == 1) {
+-            return "1";
++        if (chan < _num_chans) {
++            return std::to_string(chan);
+         }
+         throw uhd::lookup_error(
+             std::string("[X400] Invalid channel: ") + std::to_string(chan));
+diff --git a/host/lib/include/uhdlib/usrp/dboard/rfsoc4x2_dboard.hpp b/host/lib/include/uhdlib/usrp/dboard/rfsoc4x2_dboard.hpp
+new file mode 100644
+index 000000000..0ec207f56
+--- /dev/null
++++ b/host/lib/include/uhdlib/usrp/dboard/rfsoc4x2_dboard.hpp
+@@ -0,0 +1,148 @@
 +//
 +// Copyright 2026 Yijie Yu
 +//
@@ -32,8 +73,9 @@ control, selected by PID 0x4F42 (reported by MPM rfsoc4x2.py).
 +// RFSoC 4x2 direct-sampling front end for the X4xx radio control.
 +//
 +// The RFSoC 4x2 has no daughterboards: the converters connect to the SMA ports
-+// through baluns. Each radio has two bonded RX converters and one bonded TX
-+// converter (channels 0/1 and 0, identity RFDC mapping in the FPGA image).
++// through baluns. The FPGA image keeps the X440 structure, 4 ports per radio
++// (identity RFDC mapping): RX ports 0/1 and TX port 0 are the bonded
++// converters, the other ports are converters that are not bonded out ("NC").
 +// Tuning is the RFDC NCO (fine mixer), set through MPM; there are no LOs,
 +// gains, filters or antenna switches.
 +//
@@ -58,6 +100,7 @@ control, selected by PID 0x4F42 (reported by MPM rfsoc4x2.py).
 +        uhd::property_tree::sptr tree)
 +        : _unique_id(unique_id), _db_idx(db_idx), _tree(tree)
 +    {
++        _num_chans = NUM_CHANS;
 +        UHD_ASSERT_THROW(mb_controller);
 +        _rpcc = mb_controller->get_rpc_client();
 +        UHD_ASSERT_THROW(_rpcc);
@@ -115,12 +158,15 @@ control, selected by PID 0x4F42 (reported by MPM rfsoc4x2.py).
 +    }
 +
 +private:
-+    // [radio][channel]; radio0 = ADC tile 224 / DAC tile 228,
-+    // radio1 = ADC tile 226 / DAC tile 230 (RFSoC 4x2 reference manual labels)
-+    const std::array<std::array<std::string, 2>, 2> RX_LABELS = {
-+        {{"ADC_D", "ADC_C"}, {"ADC_B", "ADC_A"}}};
-+    const std::array<std::array<std::string, 2>, 2> TX_LABELS = {
-+        {{"DAC_B", "NC"}, {"DAC_A", "NC"}}};
++    static constexpr size_t NUM_CHANS = 4;
++
++    // [radio][channel]; radio0 = ADC tiles 224 (/225) / DAC tiles 228 (/229),
++    // radio1 = ADC tiles 226 (/227) / DAC tiles 230 (/231) (RFSoC 4x2 reference
++    // manual labels; NC = not bonded out)
++    const std::array<std::array<std::string, NUM_CHANS>, 2> RX_LABELS = {
++        {{"ADC_D", "ADC_C", "NC", "NC"}, {"ADC_B", "ADC_A", "NC", "NC"}}};
++    const std::array<std::array<std::string, NUM_CHANS>, 2> TX_LABELS = {
++        {{"DAC_B", "NC", "NC", "NC"}, {"DAC_A", "NC", "NC", "NC"}}};
 +
 +    double _set_nco(const std::string& trx, const double freq, const size_t chan)
 +    {
@@ -133,7 +179,7 @@ control, selected by PID 0x4F42 (reported by MPM rfsoc4x2.py).
 +    void _init_frontend_subtree()
 +    {
 +        auto subtree = _tree->subtree(fs_path("dboard"));
-+        for (size_t chan = 0; chan < 2; chan++) {
++        for (size_t chan = 0; chan < NUM_CHANS; chan++) {
 +            for (const std::string trx : {"rx", "tx"}) {
 +                const fs_path fe_path =
 +                    fs_path(trx + "_frontends") / std::to_string(chan);
@@ -157,8 +203,8 @@ control, selected by PID 0x4F42 (reported by MPM rfsoc4x2.py).
 +    uhd::property_tree::sptr _tree;
 +    uhd::rpc_client::sptr _rpcc;
 +    double _conv_rate = 0.0;
-+    std::array<double, 2> _rx_freq{{0.0, 0.0}};
-+    std::array<double, 2> _tx_freq{{0.0, 0.0}};
++    std::array<double, NUM_CHANS> _rx_freq{};
++    std::array<double, NUM_CHANS> _tx_freq{};
 +
 +    const std::string& get_unique_id() const
 +    {
@@ -167,3 +213,25 @@ control, selected by PID 0x4F42 (reported by MPM rfsoc4x2.py).
 +};
 +
 +}} // namespace uhd::rfnoc
+diff --git a/host/lib/usrp/x400/x400_radio_control.cpp b/host/lib/usrp/x400/x400_radio_control.cpp
+index c5f1cf5a9..13ab602ac 100644
+--- a/host/lib/usrp/x400/x400_radio_control.cpp
++++ b/host/lib/usrp/x400/x400_radio_control.cpp
+@@ -16,6 +16,7 @@
+ #include <uhdlib/usrp/common/x4xx_ch_modes.hpp>
+ #include <uhdlib/usrp/cores/spi_core_4000.hpp>
+ #include <uhdlib/usrp/dboard/debug_dboard.hpp>
++#include <uhdlib/usrp/dboard/rfsoc4x2_dboard.hpp>
+ #include <uhdlib/usrp/dboard/fbx/fbx_dboard.hpp>
+ #include <uhdlib/usrp/dboard/hbx/hbx_dboard.hpp>
+ #include <uhdlib/usrp/dboard/null_dboard.hpp>
+@@ -182,6 +183,9 @@ x400_radio_control_impl::x400_radio_control_impl(make_args_ptr make_args)
+                 uhd::features::internal_sync(hbx_dboard->get_hbx_cpld_ctrl()));
+             register_feature(int_sync);
+         }
++    } else if (std::stol(pid) == uhd::rfnoc::RFSOC4X2_DB_PID) {
++        _daughterboard = std::make_shared<rfsoc4x2_dboard_impl>(
++            get_block_id().get_block_count(), get_unique_id(), _mb_control, get_tree());
+     } else if (std::stol(pid) == uhd::rfnoc::DEBUG_DB_PID) {
+         _daughterboard = std::make_shared<debug_dboard_impl>();
+     } else if (std::stol(pid) == uhd::rfnoc::IF_TEST_DBOARD_PID) {

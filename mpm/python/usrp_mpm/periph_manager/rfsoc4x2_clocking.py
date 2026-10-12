@@ -120,9 +120,14 @@ class Rfsoc4x2ClockCtrl(X4xxClockCtrl):
         lmx.poke16((r0 >> 16) & 0x7F, r0 & 0xFFFF)
 
     def reset_clock(self, value, clock_to_reset):
-        """Only the sample PLL (LMK04828) has a reset line."""
-        if clock_to_reset == "spll":
-            self._lmk_rst.set(1 if value else 0)
+        """No-op: the LMK04828 is reset only right before it is programmed.
+
+        X4xxClockManager.set_sync_source() asserts the "spll" reset and leaves
+        it to a later config_spll(), which does not come when the clock
+        settings are unchanged. LMK_RST clears every LMK04828 register, so
+        holding or pulsing it here would leave the LMK in its power-on state
+        (PLL1/PLL2 unlocked, PLL1/PLL2 LEDs off).
+        """
 
     def config_rpll(self, internal_brc_source, ref_rate, internal_brc_rate, usr_clk_rate):
         """No reference PLL on the RFSoC 4x2."""
@@ -254,8 +259,8 @@ class Rfsoc4x2ClockPolicy(X4xxClockPolicy):
             output_divider=6,
             prc_divider=24,
             vcxo_freq=Spll1Vco.VCO100MHz,
-            sysref_div=384,
-            clkin0_r_div=0,
+            sysref_div=1200,
+            clkin0_r_div=4,
             pll1_n_div=0,
             pll2_prescaler=0,
             pll2_n_cal_div=0,
@@ -291,8 +296,13 @@ class Rfsoc4x2ClockManager(x4xx_clock_mgr.X4xxClockManager):
         finally:
             x4xx_clock_mgr.X4xxClockCtrl = orig_ctrl
 
+    # No clocking aux board: "mboard" (LMK04828 from the on-board TCXO) is the
+    # only clock. "internal" (the X4xx default, and what hosts may ask for) is
+    # accepted as the same thing.
+    X400_DEFAULT_CLOCK_SOURCE = x4xx_clock_mgr.X4xxClockManager.CLOCK_SOURCE_MBOARD
+
     def _init_available_srcs(self):
-        self._avail_clk_sources = [self.CLOCK_SOURCE_MBOARD]
+        self._avail_clk_sources = [self.CLOCK_SOURCE_MBOARD, self.CLOCK_SOURCE_INTERNAL]
         self._avail_time_sources = [self.TIME_SOURCE_INTERNAL]
 
     def _config_rpll(self, usr_clk_rate, internal_brc_rate, internal_brc_source):

@@ -5,4 +5,6 @@ build/
 __pycache__/
 linux/plnx_build.log
 linux/plnx_build.done
+linux/plnx_pkgs.log
+linux/plnx_pkgs.done
 linux/petalinux/project-spec/hw-description/

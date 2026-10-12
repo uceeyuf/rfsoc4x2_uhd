@@ -15,7 +15,7 @@ subclass of `x4xx` selected inside the x4xx build.
 |---|---|---|---|
 | MB EEPROM | TLV via DT symbol `mb_eeprom`; product from PID (`x4xx.py:249,454`) | none | synthetic `_eeprom_head` (PID of the X440 so `product="x440"`), serial from DNA / mpm.conf |
 | MB CPLD | spidev `mb_cpld` signature check (`x4xx_mb_cpld.py:242-275`); ctrlport CPLD signature in `CtrlportRegs` (`x4xx_periphs.py:451-506`) | none | stub CPLD control; `CtrlportRegs` without the signature check |
-| Clock chips | LMK04832 (spidev `spll`), LMK03328 (I2C `rpll_i2c`), aux board LMK05318 | LMK04828 + 2x LMX2594 on PS SPI0 SS0..2 | fixed register-file loader (`rfsoc4x2_mts` sets; SYSREF_DIV 384) |
+| Clock chips | LMK04832 (spidev `spll`), LMK03328 (I2C `rpll_i2c`), aux board LMK05318 | LMK04828 + 2x LMX2594 on PS SPI0 SS0..2 | fixed register-file loader (`rfsoc4x2_mts` sets; SYSREF 2.5 MHz, CLKin1, see `rfsoc4x2_clock_regs.py`) |
 | Clock policy | `X440ClockPolicy` computes LMK/MMCM per MCR; `MMCM_INPUT_MAX = 64e6` | MMCM input 500 MHz, one MCR (500e6) | fixed table policy like `X410ClockPolicy`, `mmcm_use_defaults=True` (keeps the bitfile MMCM) |
 | RFDC PLL | `configure_pll` per converter (`XRFdc_DynamicPLLConfig`) | PLLs only on ADC 226 / DAC 230, distributed | override `configure` to skip `configure_pll` (keep the IP's power-on clocking) |
 | RFDC driver | bundled xrfdc v6.0 (embeddedsw 2019.1); `param-list` in the v6.0 `XRFdc_Config` layout (`mpm/include/mpm/rfdc/xrfdc.h:498-547`) | PetaLinux 2023.2 DTG emits the newer layout | build the `param-list` for v6.0 ourselves (or update the bundled driver); verify Gen3 support |

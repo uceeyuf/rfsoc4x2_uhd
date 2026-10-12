@@ -14,6 +14,9 @@ IMG=${2:-$HERE/../linux/petalinux/images/linux}
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 [ "$(id -u)" = 0 ] || die "run with sudo"
+# One instance at a time (a second one would erase the card being written)
+exec 9>/run/rfsoc4x2_make_sd.lock
+flock -n 9 || die "another make_sd.sh is running"
 [ -b "$DEV" ] || die "usage: sudo $0 /dev/sdX   ($DEV is not a block device)"
 [ "$(lsblk -dno TYPE "$DEV")" = disk ] || die "$DEV is not a whole disk"
 for f in BOOT.BIN boot.scr Image system.dtb rootfs.ext4; do

@@ -9,7 +9,7 @@
 
 A UHD port for the RealDigital **RFSoC 4x2** (xczu48dr), modelled on the Ettus USRP **X410 / X420 / X440** architecture of UHD 4.11: an RFNoC FPGA image with 100 GbE (QSFP28) and DMA, the Module Peripheral Manager (MPM) on PetaLinux, and the standard `mpmd` host driver. The FPGA keeps the X440 register map and RFNoC device type, so UHD's X4xx code applies; the board-specific parts (RFDC on a Gen3 device, LMK04828 / LMX2594 clocking, no CPLDs or daughterboards) are replaced.
 
-**Status (2026-10-12): first light on the board.** Vivado 2023.2, all timing constraints met (WNS +0.175 ns); PetaLinux 2023.2 boots, MPM initializes the clocks (LMK04828 PLL1/PLL2 and both LMX2594 locked), the RFDC and the FPGA; `uhd_find_devices` / `uhd_usrp_probe` work over 100 GbE with the patched host (2 radios x 4 ports) and RX samples reach the host. Not yet done: TX / loopback tests, DAC multi-tile sync (the RFDC driver bundled with MPM computes wrong DAC latencies on this Gen3 device), full-rate streaming with DPDK. Bring-up notes: [docs/bringup.md](./docs/bringup.md).
+**Status (2026-10-12): running on the board.** Vivado 2023.2, all timing constraints met; PetaLinux 2023.2 with MPM; clocks locked (LMK04828 PLL1/PLL2, both LMX2594). Over 100 GbE with DPDK: 2 x RX + 2 x TX at 500 MS/s (64 Gb/s) without drops. Loopbacks DAC_B -> ADC_D and DAC_A -> ADC_B with multi-tile sync and NCO reset: delay difference below 1 ps, phase difference about 1 deg, the same after every boot. Notes and open points: [docs/bringup.md](./docs/bringup.md).
 
 　
 
@@ -75,7 +75,7 @@ GPL-3.0-or-later ([LICENSE](LICENSE)); files derived from UHD keep their notices
 
 为 RealDigital **RFSoC 4x2**（xczu48dr）移植 UHD，架构参照 UHD 4.11 中 Ettus USRP **X410 / X420 / X440**：RFNoC FPGA 镜像（100 GbE QSFP28 + DMA）、PetaLinux 上的 MPM，以及标准的 `mpmd` 主机驱动。FPGA 保留 X440 的寄存器映射和 RFNoC 设备类型，UHD 的 X4xx 代码可以直接复用；板级差异（第三代 RFDC、LMK04828 / LMX2594 时钟、没有 CPLD 和子板）单独替换。
 
-**状态（2026-10-12）：板上初步跑通。** Vivado 2023.2，时序全部满足（WNS +0.175 ns）；PetaLinux 2023.2 启动，MPM 完成时钟（LMK04828 PLL1/PLL2 与两片 LMX2594 均锁定）、RFDC 与 FPGA 初始化；用打过补丁的主机端 UHD，经 100 GbE 运行 `uhd_find_devices` / `uhd_usrp_probe` 正常（2 个 radio × 4 端口），RX 数据可送到主机。尚未完成：TX / 回环测试、DAC 多 tile 同步（MPM 自带的 RFDC 驱动在这颗 Gen3 器件上算错 DAC 延迟）、DPDK 满速率收发。上板记录见 [docs/bringup.md](./docs/bringup.md)。
+**状态（2026-10-12）：已在板上运行。** Vivado 2023.2，时序全部满足；PetaLinux 2023.2 + MPM；时钟锁定（LMK04828 PLL1/PLL2 与两片 LMX2594）。经 100 GbE + DPDK：2 路 RX + 2 路 TX 各 500 MS/s（64 Gb/s）无丢包。DAC_B → ADC_D、DAC_A → ADC_B 两路回环在多 tile 同步与 NCO 复位后，时延差小于 1 ps，相位差约 1°，每次开机都一致。上板记录与待办见 [docs/bringup.md](./docs/bringup.md)。
 
 　
 

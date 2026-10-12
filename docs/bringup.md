@@ -122,5 +122,19 @@ same timed 4096-sample QPSK burst on both DACs, NCOs at 1 GHz, 500 MS/s:
   (rfsoc4x2_clocking) uses PRC/RC divider 0 and moves the pulse by one PRC
   cycle when a timekeeper sees no PPS.
 
-Open: spectral inversion / ADC_D polarity, common-mode loop delay toggling by
-54 ps between MPM starts, DPDK streaming.
+- Spectral orientation (DC burst on the DACs at 1.0 GHz, ADC NCOs at 1.01 GHz):
+  the ADC path comes out inverted in the first Nyquist zone, the DAC path
+  upright. The host front end sets the FPGA I/Q swap from the Nyquist zone of
+  the NCO frequency (RX swapped in odd zones counted from 1, TX in even ones).
+- ADC_D (inverted balun): 179.999 deg NCO phase offset set by MPM (patch 0004,
+  the driver accepts -180 < offset < 180).
+
+Result after a fresh boot: delay difference +0.2 ps, phase difference +0.9 deg,
+correlation 0.97 on both loops, same in every session.
+
+Known: every MPM restart (overlay removed and applied again) leaks the two
+fixed-link PHYs of the nixge ports; after about 15 restarts in one boot the
+nixge probe fails with -ENOSPC (no sfp0). Reboot the board.
+
+Open: common-mode loop delay toggling by 54 ps between MPM starts, fixed-link
+PHY leak, DPDK streaming.

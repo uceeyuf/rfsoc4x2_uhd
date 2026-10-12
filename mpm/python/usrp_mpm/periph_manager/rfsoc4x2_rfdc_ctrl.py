@@ -23,7 +23,7 @@ and 2 only.
 import contextlib
 import itertools
 
-from usrp_mpm.periph_manager.x4xx_rfdc_ctrl import CONV_OPTIONS, X4xxRfdcCtrl
+from usrp_mpm.periph_manager.x4xx_rfdc_ctrl import CONV_OPTIONS, MixerMode, X4xxRfdcCtrl
 from usrp_mpm.rpc_utils import no_rpc
 
 # RFDC tile indices (ADC 224 / 226, DAC 228 / 230) with converters on the SMAs
@@ -32,6 +32,11 @@ NUM_TILES = 4
 # MTS reference tile: tiles 226 / 230 generate the converter clocks and
 # distribute them (MPM patch 0002 makes it settable; the X4xx uses tile 0)
 MTS_REF_TILE = 2
+# (radio, RX channel) of the inputs whose balun is inverted on the RFSoC 4x2:
+# ADC_D. Compensated with a 180 deg NCO phase offset (MPM patch 0004); the
+# RFDC driver takes offsets in the open range (-180, 180) only.
+INVERTED_RX = ((0, 0),)
+INVERT_PHASE_DEG = 179.999
 
 
 class Rfsoc4x2RfdcCtrl(X4xxRfdcCtrl):
@@ -104,3 +109,9 @@ class Rfsoc4x2RfdcCtrl(X4xxRfdcCtrl):
             # RFDC NCO reset event source: analog SYSREF
             self._rfdc_ctrl.set_nco_event_src(conv.tile, conv.block, conv_direction)
         self._rfdc_regs.reset()
+        for db_idx, channel in INVERTED_RX:
+            for tile, block, _ in self._find_converters(db_idx, channel, "rx", MixerMode.ALL):
+                if not self._rfdc_ctrl.set_nco_phase_offset(
+                    tile, block, CONV_OPTIONS["ADC"], INVERT_PHASE_DEG
+                ):
+                    self.log.warning(f"Failed to invert ADC tile {tile} block {block}")

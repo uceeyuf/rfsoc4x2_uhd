@@ -1,0 +1,70 @@
+MPM RFDC: settable NCO phase offset (the RFSoC 4x2 compensates the inverted
+balun of ADC_D with 180 deg).
+
+diff --git a/mpm/include/mpm/rfdc/rfdc_ctrl.hpp b/mpm/include/mpm/rfdc/rfdc_ctrl.hpp
+index c6000c2cf..b1bbfa466 100644
+--- a/mpm/include/mpm/rfdc/rfdc_ctrl.hpp
++++ b/mpm/include/mpm/rfdc/rfdc_ctrl.hpp
+@@ -354,6 +354,22 @@ public:
+     bool set_nco_event_src(
+         uint32_t tile_id, uint32_t block_id, converter_options conv_option);
+ 
++    /**
++     * Sets the phase offset of the NCO (fine mixer) of a DAC or ADC. The NCO
++     * frequency setting keeps it.
++     *
++     * @param    tile_id the tile ID of the block to set
++     * @param    block_id the block ID of the block to set
++     * @param    conv_option whether the block is a DAC or ADC
++     * @param    phase_deg the phase offset in degrees, -180 < phase_deg < 180
++     *
++     * @return   true if the operation was successful
++     */
++    bool set_nco_phase_offset(uint32_t tile_id,
++        uint32_t block_id,
++        converter_options conv_option,
++        double phase_deg);
++
+     /**
+      * Sets the NCO frequency for a given DAC or ADC
+      *
+@@ -804,6 +820,7 @@ void export_rfdc(py::module& top_module)
+         .def("set_nco_event_src", &rfdc_ctrl::set_nco_event_src)
+         .def("set_nco_freq", &rfdc_ctrl::set_nco_freq)
+         .def("get_nco_freq", &rfdc_ctrl::get_nco_freq)
++        .def("set_nco_phase_offset", &rfdc_ctrl::set_nco_phase_offset)
+         .def("reset_mixer_settings", &rfdc_ctrl::reset_mixer_settings)
+         .def("set_mixer_mode", &rfdc_ctrl::set_mixer_mode)
+         .def("set_nyquist_zone", &rfdc_ctrl::set_nyquist_zone)
+diff --git a/mpm/lib/rfdc/rfdc_ctrl.cpp b/mpm/lib/rfdc/rfdc_ctrl.cpp
+index 727bad3bb..2610204f4 100644
+--- a/mpm/lib/rfdc/rfdc_ctrl.cpp
++++ b/mpm/lib/rfdc/rfdc_ctrl.cpp
+@@ -417,6 +417,27 @@ bool rfdc_ctrl::set_nco_freq(
+            && trigger_update_event(tile_id, block_id, conv_option, MIXER_EVENT);
+ }
+ 
++bool rfdc_ctrl::set_nco_phase_offset(uint32_t tile_id,
++    uint32_t block_id,
++    converter_options conv_option,
++    double phase_deg)
++{
++    XRFdc_Mixer_Settings mixer_settings;
++
++    if (XRFdc_GetMixerSettings(
++            rfdc_inst_ptr, conv_option, tile_id, block_id, &mixer_settings)
++        != XRFDC_SUCCESS) {
++        return false;
++    }
++    mixer_settings.PhaseOffset = phase_deg;
++    mixer_settings.EventSource = XRFDC_EVNT_SRC_TILE;
++
++    return (XRFdc_SetMixerSettings(
++                rfdc_inst_ptr, conv_option, tile_id, block_id, &mixer_settings)
++               == XRFDC_SUCCESS)
++           && trigger_update_event(tile_id, block_id, conv_option, MIXER_EVENT);
++}
++
+ double rfdc_ctrl::get_nco_freq(
+     uint32_t tile_id, uint32_t block_id, converter_options conv_option)
+ {

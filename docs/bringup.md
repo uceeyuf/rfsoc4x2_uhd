@@ -129,6 +129,11 @@ same timed 4096-sample QPSK burst on both DACs, NCOs at 1 GHz, 500 MS/s:
 - ADC_D (inverted balun): 179.999 deg NCO phase offset set by MPM (patch 0004,
   the driver accepts -180 < offset < 180).
 
+Second Nyquist zone (3 GHz, MPM set_if sets the RFDC Nyquist zone): the DC
+tone test gives the right orientation (RX not swapped, TX swapped); loopback
+delay difference -52 ps, phase -1.9 deg, correlation 0.7 (no filters: the DAC
+image at 3 GHz and its fundamental at 1 GHz alias onto each other in the ADC).
+
 Result after a fresh boot: delay difference +0.2 ps, phase difference +0.9 deg,
 correlation 0.97 on both loops, same in every session.
 

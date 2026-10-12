@@ -66,6 +66,8 @@ GitHub also offers the citation under **Cite this repository** (from [CITATION.c
 
 GPL-3.0-or-later ([LICENSE](LICENSE)); files derived from UHD keep their notices (FPGA sources LGPL-3.0-or-later, MPM GPL-3.0-or-later). UHD itself is a submodule under its own licenses.
 
+This is an independent project, not affiliated with or endorsed by NI / Ettus Research, AMD / Xilinx or RealDigital. USRP, UHD and Ettus Research are trademarks of NI; RFSoC is a trademark of AMD; they are used here only to describe compatibility. No bitstreams are distributed: building the FPGA image needs Vivado and the (free) AMD license for the 100G Ethernet subsystem (CMAC).
+
 　
 
 　
@@ -131,3 +133,5 @@ GitHub 仓库页的 **Cite this repository** 也提供同样的引用（来自 [
 ## 许可证
 
 GPL-3.0-or-later（[LICENSE](LICENSE)）；源自 UHD 的文件保留原有声明（FPGA 源码 LGPL-3.0-or-later，MPM GPL-3.0-or-later）。UHD 本身以子模块形式引入，遵循其自身许可证。
+
+本项目为独立项目，与 NI / Ettus Research、AMD / Xilinx、RealDigital 均无关联，也未获其认可。USRP、UHD、Ettus Research 是 NI 的商标，RFSoC 是 AMD 的商标，此处仅用于说明兼容性。仓库不发布 bitstream：编译 FPGA 镜像需要 Vivado 以及 AMD 100G 以太网子系统（CMAC）的（免费）许可证。

@@ -147,11 +147,11 @@ of the QSFP28 port, so the MPM RPC goes over the 1 GbE ports: host
 - The kernel reports the nixge fixed-link speed (1000) for sfp0; MPM passed it
   on as the link rate, and UHD used 1 GbE frames (1500 bytes, 352 samples) and
   buffers. MPM (Rfsoc4x2XportMgrUDP) reports 100000 Mb/s for sfp0.
-- UHD's MTU discovery goes through the board CPU and finds 1500 bytes; the
-  CHDR path takes 8000-byte frames: `force_mtu=8000` (1984 samples per packet).
+  With the 1 GbE rate UHD also capped the MTU discovery at 1500 bytes; now it
+  finds 8016 (1984 samples per packet), no `force_mtu` needed.
 
 benchmark_rate, 500 MS/s, 10 s: 1 x RX: 4999912264 samples, no drops; 2 x RX +
 2 x TX (64 Gb/s): no drops, no overruns, 6 underruns at the start of TX.
 
 Open: common-mode loop delay toggling by 54 ps between MPM starts, fixed-link
-PHY leak, MTU discovery through the board CPU.
+PHY leak.

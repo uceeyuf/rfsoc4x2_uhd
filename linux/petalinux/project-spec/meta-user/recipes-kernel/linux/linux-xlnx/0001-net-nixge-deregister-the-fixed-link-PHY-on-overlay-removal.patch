@@ -1,0 +1,50 @@
+From: Yijie Yu <170913362+uceeyuf@users.noreply.github.com>
+Subject: [PATCH] net: nixge: deregister the fixed-link PHY on overlay removal
+
+nixge_remove() checks of_phy_is_fixed_link() before deregistering the
+fixed-link PHY. When the device comes from a device tree overlay and goes
+with it, the fixed-link child node is detached before the device node, so
+the check fails and the PHY stays registered. Every overlay cycle leaks one
+fixed PHY address until fixed_phy_register() fails with -ENOSPC ("broken
+fixed-link specification"). Remember the registration in probe instead.
+
+---
+--- a/drivers/net/ethernet/ni/nixge.c	2026-10-13 00:02:50.244508847 +0100
++++ b/drivers/net/ethernet/ni/nixge.c	2026-10-13 00:02:50.254073440 +0100
+@@ -172,6 +172,7 @@
+ 
+ 	/* Connection to PHY device */
+ 	struct device_node *phy_node;
++	bool fixed_link;	/* fixed-link PHY registered in probe */
+ 	phy_interface_t		phy_mode;
+ 
+ 	int link;
+@@ -1342,6 +1343,7 @@
+ 			netdev_err(ndev, "broken fixed-link specification\n");
+ 			goto unregister_mdio;
+ 		}
++		priv->fixed_link = true;
+ 		phy_node = of_node_get(pdev->dev.of_node);
+ 	}
+ 	priv->phy_node = phy_node;
+@@ -1355,7 +1357,7 @@
+ 	return 0;
+ 
+ free_phy:
+-	if (of_phy_is_fixed_link(pdev->dev.of_node))
++	if (priv->fixed_link)
+ 		of_phy_deregister_fixed_link(pdev->dev.of_node);
+ 	of_node_put(phy_node);
+ 
+@@ -1376,7 +1378,10 @@
+ 
+ 	unregister_netdev(ndev);
+ 
+-	if (of_phy_is_fixed_link(pdev->dev.of_node))
++	/* Not of_phy_is_fixed_link(): when the device goes with a device tree
++	 * overlay, the fixed-link child node is detached before this node.
++	 */
++	if (priv->fixed_link)
+ 		of_phy_deregister_fixed_link(pdev->dev.of_node);
+ 	of_node_put(priv->phy_node);
+ 

@@ -30,11 +30,12 @@ the new XSA comes first.
 
 ## 2. SD card
 
-Two partitions: FAT32 `BOOT` (~512 MB) and ext4 `rootfs`.
+Two partitions: FAT32 `BOOT` (512 MB) and ext4 `rootfs`, written by
+`tools/make_sd.sh` (checks that the target is a removable card, asks before
+erasing):
 
 ```sh
-cp images/linux/{BOOT.BIN,boot.scr,Image,system.dtb} /media/$USER/BOOT/
-sudo dd if=images/linux/rootfs.ext4 of=/dev/sdX2 bs=4M conv=fsync   # check sdX first
+sudo tools/make_sd.sh /dev/sdX
 ```
 
 ## 3. First boot (serial console, UART1, 115200)
@@ -62,20 +63,33 @@ Things most likely to need fixing on the first boot:
 
 ## 4. Host
 
-UHD 4.11 (unmodified) on the host; the front ends report the X4xx debug
-daughterboard PID, so the host drives them as inert front ends (streaming and
-timed commands; no frequency/gain control until the host patch is in).
+UHD 4.11 with `host/patches` (RFSoC 4x2 front end, MPM reports its PID 0x4F42):
+`host/build.sh` builds it from a worktree of the submodule and installs to
+`~/uhd-rfsoc4x2`. An unmodified UHD does not know the front end.
+
+Network (direct cables):
+
+| | host | board |
+|---|---|---|
+| data, 100 GbE (QSFP28) | 192.168.10.1/24, MTU 9000 | sfp0 192.168.10.2 |
+| management, 1 GbE | 192.168.30.1/24 | eth0 192.168.30.2 (and DHCP) |
 
 ```sh
-uhd_find_devices --args type=x4xx
-uhd_usrp_probe --args addr=<eth0 IP>
-uhd_rx_cfile -A RX1 ...                       # radio0 port 0 = ADC_D
+export LD_LIBRARY_PATH=~/uhd-rfsoc4x2/lib PATH=~/uhd-rfsoc4x2/bin:$PATH
+uhd_find_devices --args addr=192.168.10.2
+uhd_usrp_probe --args addr=192.168.10.2,mgmt_addr=192.168.30.2
+host/tools/loopback_mts.py --args addr=192.168.10.2   # DAC_B->ADC_D, DAC_A->ADC_B
 ```
 
-Bonded converters (identity RFDC mapping): radio0 RX ports 0/1 = ADC_D/ADC_C,
-TX port 0 = DAC_B; radio1 RX 0/1 = ADC_B/ADC_A, TX 0 = DAC_A. Master clock rate
-500 MS/s (400 MHz bandwidth image), 100 GbE on the QSFP28 (host: ConnectX-4,
-MTU 9000, DPDK for high rates).
+Full rate (500 MS/s per channel) needs DPDK, see section 6 and
+`host/uhd-dpdk.conf`.
+
+Channels: the X440 image has 4 ports per radio; the bonded converters
+(identity RFDC mapping) are radio0 RX ports 0/1 = ADC_D/ADC_C, TX port 0 =
+DAC_B; radio1 RX 0/1 = ADC_B/ADC_A, TX 0 = DAC_A, i.e. multi_usrp channels 0, 1
+and 4, 5 (RX), 0 and 4 (TX). The other ports are converters that are not
+bonded out ("NC"). Tuning sets the RFDC NCO (and the Nyquist zone); no gain
+control. Master clock rate 500 MS/s, 400 MHz bandwidth.
 
 ## 5. First board run (2026-10-12)
 

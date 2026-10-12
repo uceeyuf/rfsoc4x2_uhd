@@ -98,5 +98,20 @@ Fixed on the way:
 - ADC tiles 225 / 227 (not bonded out) stop in calibration: startup checks and
   MTS use tiles 0 / 2, reference tile 2 (MPM patch 0002).
 
-Open: DAC MTS (bundled RFDC driver v6.0 computes DAC latencies of ~5e5 on the
-48DR), TX / loopback, DPDK streaming.
+MTS: the RFDC driver v6.0 bundled with MPM predates the Gen3 RFDC (DAC marker
+location read without the Gen3 mask, DAC latencies of ~5e5; Gen1/2 delay
+registers). MPM patch 0003 takes the MTS code of driver v12.1.
+
+Loopback DAC_B -> ADC_D (radio0 port 0) and DAC_A -> ADC_B (radio1 port 0),
+same timed 4096-sample QPSK burst on both DACs, NCOs at 1 GHz, 500 MS/s:
+- delay difference between the two loops 0.0 +- 0.001 samples (< 1 ps) after
+  every MPM restart (5 restarts) and every host session; correlation 0.97..0.99
+  (0.68..0.82 on the DAC_A loop before the MTS fix, delay changing by a DAC
+  sample between initializations);
+- received spectrum inverted against the sent one (TX/RX NCO conventions);
+  ADC_D inverted (balun) as known from rfsoc4x2_mts;
+- phase difference between the loops: one of 5 values 72 deg apart from one MPM
+  start to the next (NCO reset not aligned between tiles), stable within a start.
+
+Open: NCO phase alignment between tiles, occasional "Board 0 may not be getting a
+PPS signal" on host sync, spectral inversion / ADC_D polarity, DPDK streaming.

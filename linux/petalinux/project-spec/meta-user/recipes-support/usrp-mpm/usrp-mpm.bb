@@ -11,6 +11,7 @@ RFSOC4X2_REPO = "${TOPDIR}/../../.."
 SRC_URI = "git://${RFSOC4X2_REPO}/uhd;protocol=file;nobranch=1 \
            file://${RFSOC4X2_REPO}/mpm/patches/0001-mpm-periph-manager-rfsoc4x2.patch;patchdir=${WORKDIR}/git \
            file://${RFSOC4X2_REPO}/mpm/patches/0002-mpm-rfdc-mts-ref-tile.patch;patchdir=${WORKDIR}/git \
+           file://${RFSOC4X2_REPO}/mpm/patches/0003-mpm-rfdc-mts-driver-v12.patch;patchdir=${WORKDIR}/git \
           "
 # UHD v4.11.0.0
 SRCREV = "0d7ed3b1a4e301032b0c6b04799d7631c5098528"

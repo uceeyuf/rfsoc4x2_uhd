@@ -193,3 +193,5 @@ underruns. (benchmark_rate sets the rate on all 8 channels; the ports without
 DDC report "invalid sampling rate", which does not concern channels 0 and 4.)
 Loopback through DDC / DUC: 500 MS/s +0.5 ps / +0.9 deg, 125 MS/s +3.1 ps /
 +1.0 deg between the two loops.
+DPDK, 2 x RX + 2 x TX at 500 MS/s through the DDC / DUC image (decimation /
+interpolation 1): no drops, no overruns, no underruns in 10 s.

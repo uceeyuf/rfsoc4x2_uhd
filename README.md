@@ -9,7 +9,29 @@
 
 A UHD port for the RealDigital **RFSoC 4x2** (xczu48dr), modelled on the Ettus USRP **X410 / X420 / X440** architecture of UHD 4.11: an RFNoC FPGA image with 100 GbE (QSFP28) and DMA, the Module Peripheral Manager (MPM) on PetaLinux, and the standard `mpmd` host driver. The FPGA keeps the X440 register map and RFNoC device type, so UHD's X4xx code applies; the board-specific parts (RFDC on a Gen3 device, LMK04828 / LMX2594 clocking, no CPLDs or daughterboards) are replaced.
 
-**Status (2026-10-12): running on the board.** Vivado 2023.2, all timing constraints met; PetaLinux 2023.2 with MPM; clocks locked (LMK04828 PLL1/PLL2, both LMX2594). Over 100 GbE with DPDK: 2 x RX + 2 x TX at 500 MS/s (64 Gb/s) without drops. Loopbacks DAC_B -> ADC_D and DAC_A -> ADC_B with multi-tile sync and NCO reset: delay difference below 1 ps, phase difference about 1 deg, the same after every boot. Notes and open points: [docs/bringup.md](./docs/bringup.md).
+**Status (2026-10-12): running on the board.** Vivado 2023.2, all timing constraints met; PetaLinux 2023.2 with MPM; clocks locked (LMK04828 PLL1/PLL2, both LMX2594). Over 100 GbE: 2 x RX + 2 x TX at 500 MS/s (64 Gb/s, DPDK) without drops; with the DDC / DUC image, rates of 500 MS/s / N, up to 125 MS/s 2 x 2 over the kernel network stack. Loopbacks DAC_B -> ADC_D and DAC_A -> ADC_B with multi-tile sync and NCO reset: delay difference below 1 ps, phase difference about 1 deg, the same after every boot. Notes and open points: [docs/bringup.md](./docs/bringup.md).
+
+　
+
+## Quick start
+
+Board: SD card from `tools/make_sd.sh` (PetaLinux image with MPM and the FPGA firmware). Cables: QSFP28 to the host's 100 GbE NIC, RJ45 (1 GbE) to the host for management.
+
+| | host | board |
+|---|---|---|
+| data, 100 GbE | 192.168.10.1/24, MTU 9000 | sfp0 192.168.10.2 |
+| management, 1 GbE | 192.168.30.1/24 | eth0 192.168.30.2 |
+
+```sh
+host/build.sh                                     # UHD 4.11 + host/patches -> ~/uhd-rfsoc4x2
+export LD_LIBRARY_PATH=~/uhd-rfsoc4x2/lib PATH=~/uhd-rfsoc4x2/bin:$PATH
+uhd_usrp_probe --args addr=192.168.10.2,mgmt_addr=192.168.30.2
+~/uhd-rfsoc4x2/lib/uhd/examples/benchmark_rate --args addr=192.168.10.2,mgmt_addr=192.168.30.2 \
+    --rx_rate 125e6 --rx_channels 0,4 --tx_rate 125e6 --tx_channels 0,4
+host/tools/loopback_mts.py --args addr=192.168.10.2   # SMA DAC_B->ADC_D, DAC_A->ADC_B
+```
+
+multi_usrp channels: RX 0/1 = ADC_D/ADC_C, RX 4/5 = ADC_B/ADC_A, TX 0 = DAC_B, TX 4 = DAC_A. Tuning sets the RFDC NCO; there is no gain control (direct sampling). 500 MS/s per channel needs DPDK: `host/uhd-dpdk.conf`. Details: [docs/bringup.md](./docs/bringup.md).
 
 　
 
@@ -77,7 +99,29 @@ This is an independent project, not affiliated with or endorsed by NI / Ettus Re
 
 为 RealDigital **RFSoC 4x2**（xczu48dr）移植 UHD，架构参照 UHD 4.11 中 Ettus USRP **X410 / X420 / X440**：RFNoC FPGA 镜像（100 GbE QSFP28 + DMA）、PetaLinux 上的 MPM，以及标准的 `mpmd` 主机驱动。FPGA 保留 X440 的寄存器映射和 RFNoC 设备类型，UHD 的 X4xx 代码可以直接复用；板级差异（第三代 RFDC、LMK04828 / LMX2594 时钟、没有 CPLD 和子板）单独替换。
 
-**状态（2026-10-12）：已在板上运行。** Vivado 2023.2，时序全部满足；PetaLinux 2023.2 + MPM；时钟锁定（LMK04828 PLL1/PLL2 与两片 LMX2594）。经 100 GbE + DPDK：2 路 RX + 2 路 TX 各 500 MS/s（64 Gb/s）无丢包。DAC_B → ADC_D、DAC_A → ADC_B 两路回环在多 tile 同步与 NCO 复位后，时延差小于 1 ps，相位差约 1°，每次开机都一致。上板记录与待办见 [docs/bringup.md](./docs/bringup.md)。
+**状态（2026-10-12）：已在板上运行。** Vivado 2023.2，时序全部满足；PetaLinux 2023.2 + MPM；时钟锁定（LMK04828 PLL1/PLL2 与两片 LMX2594）。经 100 GbE：2 路 RX + 2 路 TX 各 500 MS/s（64 Gb/s，DPDK）无丢包；DDC / DUC 镜像支持 500 MS/s / N 的采样率，2×2 到 125 MS/s 用普通内核网络即可。DAC_B → ADC_D、DAC_A → ADC_B 两路回环在多 tile 同步与 NCO 复位后，时延差小于 1 ps，相位差约 1°，每次开机都一致。上板记录与待办见 [docs/bringup.md](./docs/bringup.md)。
+
+　
+
+## 快速上手
+
+板子：用 `tools/make_sd.sh` 写 SD 卡（含 MPM 与 FPGA 固件的 PetaLinux 镜像）。连线：QSFP28 接主机的 100 GbE 网卡，RJ45（1 GbE）接主机作管理口。
+
+| | 主机 | 板子 |
+|---|---|---|
+| 数据，100 GbE | 192.168.10.1/24，MTU 9000 | sfp0 192.168.10.2 |
+| 管理，1 GbE | 192.168.30.1/24 | eth0 192.168.30.2 |
+
+```sh
+host/build.sh                                     # UHD 4.11 + host/patches -> ~/uhd-rfsoc4x2
+export LD_LIBRARY_PATH=~/uhd-rfsoc4x2/lib PATH=~/uhd-rfsoc4x2/bin:$PATH
+uhd_usrp_probe --args addr=192.168.10.2,mgmt_addr=192.168.30.2
+~/uhd-rfsoc4x2/lib/uhd/examples/benchmark_rate --args addr=192.168.10.2,mgmt_addr=192.168.30.2 \
+    --rx_rate 125e6 --rx_channels 0,4 --tx_rate 125e6 --tx_channels 0,4
+host/tools/loopback_mts.py --args addr=192.168.10.2   # SMA 回环 DAC_B->ADC_D、DAC_A->ADC_B
+```
+
+multi_usrp 通道：RX 0/1 = ADC_D/ADC_C，RX 4/5 = ADC_B/ADC_A，TX 0 = DAC_B，TX 4 = DAC_A。调频即设置 RFDC 的 NCO；直采没有增益控制。每路 500 MS/s 需要 DPDK：见 `host/uhd-dpdk.conf`。详细说明见 [docs/bringup.md](./docs/bringup.md)。
 
 　
 

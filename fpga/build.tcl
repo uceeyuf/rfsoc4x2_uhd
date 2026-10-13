@@ -131,6 +131,23 @@ foreach f $srcs {
 }
 set incdirs [lsort -unique $incdirs]
 
+# Xilinx IP instantiated by RFNoC blocks of the image (DDC / DUC: the DDS sine /
+# cosine table of dds_ms.sv). The upstream flow builds them in build-ip; here
+# the .xci is copied into the project (the submodule stays clean), upgraded to
+# this Vivado and synthesized with the top level.
+set rfnoc_ips {dds_sin_cos_lut_only}
+foreach name $rfnoc_ips {
+  if {[lsearch -glob $srcs */$name.xci] < 0} continue
+  file mkdir $out/ip/$name
+  file copy -force $root/uhd/fpga/usrp3/lib/ip/$name/$name.xci $out/ip/$name/
+  add_files -norecurse $out/ip/$name/$name.xci
+  set ip [get_ips $name]
+  upgrade_ip $ip
+  set_property generate_synth_checkpoint false [get_files $out/ip/$name/$name.xci]
+  generate_target all $ip
+  puts "BUILDER: RFNoC block IP $name"
+}
+
 add_files -fileset constrs_1 -norecurse [list $root/fpga/constraints/pins/rfsoc4x2.xdc \
   $root/fpga/constraints/timing/rfsoc4x2.xdc]
 add_files -fileset constrs_1 -norecurse $root/fpga/constraints/pins/rfsoc4x2_impl.xdc

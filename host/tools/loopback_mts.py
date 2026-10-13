@@ -23,6 +23,7 @@ p = argparse.ArgumentParser()
 p.add_argument("--args", default="addr=192.168.10.2")
 p.add_argument("--chans", default="0,4")
 p.add_argument("--freq", type=float, default=1e9)
+p.add_argument("--rate", type=float, default=0, help="host sample rate (DDC/DUC image); 0: leave as is")
 p.add_argument("--nsend", type=int, default=4096)
 p.add_argument("--nrecv", type=int, default=16384)
 p.add_argument("--reps", type=int, default=2)
@@ -31,6 +32,10 @@ a = p.parse_args()
 chans = [int(c) for c in a.chans.split(",")]
 
 usrp = uhd.usrp.MultiUSRP(a.args)
+if a.rate:
+    for c in chans:
+        usrp.set_rx_rate(a.rate, c)
+        usrp.set_tx_rate(a.rate, c)
 rate = usrp.get_rx_rate(chans[0])
 for c in chans:
     usrp.set_tx_freq(uhd.types.TuneRequest(a.freq), c)

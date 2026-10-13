@@ -176,3 +176,20 @@ benchmark_rate, 500 MS/s, 10 s: 1 x RX: 4999912264 samples, no drops; 2 x RX +
 2 x TX (64 Gb/s): no drops, no overruns, 6 underruns at the start of TX.
 
 Open: common-mode loop delay toggling by 54 ps between MPM starts.
+
+## 7. DDC / DUC image (2026-10-13)
+
+`fpga/rfsoc4x2_CG_400_DDC_rfnoc_image_core.yml` (default of `fpga/build.sh`):
+the CG_400 image with RFNoC DDC / DUC blocks on the bonded converters (radio
+RX ports 0/1, TX port 0; NIPC 2 on ce_clk, as in the X410 CG_400 image), so
+host rates of 500 MS/s / N work. The DDS table IP of the multisample DDC / DUC
+(`dds_sin_cos_lut_only`) is taken from the UHD IP library by `fpga/build.tcl`.
+
+Build: WNS +0.076 ns, WHS +0.009 ns; LUT 68 %, DSP 32 % (CG_400: 56 %, 12 %).
+
+benchmark_rate, kernel UDP, normal user, 2 x RX + 2 x TX for 10 s: 50, 100 and
+125 MS/s without drops, overruns or underruns; 250 MS/s: no RX drops, 37 TX
+underruns. (benchmark_rate sets the rate on all 8 channels; the ports without
+DDC report "invalid sampling rate", which does not concern channels 0 and 4.)
+Loopback through DDC / DUC: 500 MS/s +0.5 ps / +0.9 deg, 125 MS/s +3.1 ps /
++1.0 deg between the two loops.

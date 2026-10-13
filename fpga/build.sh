@@ -13,7 +13,9 @@ JOBS=${2:-4}
 HERE=$(cd "$(dirname "$0")" && pwd)
 ROOT=$(cd "$HERE/.." && pwd)
 VIVADO_SETTINGS=${VIVADO_SETTINGS:-/tools/Xilinx/Vivado/2023.2/settings64.sh}
-YAML=${YAML:-$HERE/rfsoc4x2_CG_400_rfnoc_image_core.yml}
+# Default: the image with DDC / DUC (rfsoc4x2_CG_400_DDC); YAML=fpga/rfsoc4x2_CG_400_rfnoc_image_core.yml
+# builds the one without (radios straight to the stream endpoints).
+YAML=${YAML:-$HERE/rfsoc4x2_CG_400_DDC_rfnoc_image_core.yml}
 X400=$ROOT/uhd/fpga/usrp3/top/x400
 
 mkdir -p "$ROOT/build"
